@@ -79,3 +79,4 @@ Gmail fallback failed: TypeError: nodemailer.createTransporter is not a function
   failure_reason: null
 }
  POST /api/auth/send-otp 200 in 1763ms
+   Reload env: .env.local
