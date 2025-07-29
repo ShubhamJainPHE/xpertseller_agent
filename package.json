@@ -1,0 +1,14 @@
+{
+    "scripts": {
+      "dev": "next dev",
+      "build": "next build",
+      "start": "next start",
+      "migrate": "tsx scripts/migrate.ts up",
+      "agents": "tsx scripts/start-agents.ts",
+      "migrate:rollback": "tsx scripts/migrate.ts rollback",
+      "db:reset": "tsx scripts/reset-database.ts",
+      "db:seed": "tsx scripts/seed-database.ts",
+      "db:backup": "tsx scripts/backup-database.ts",
+      "db:health": "tsx scripts/health-check.ts"
+    }
+  }
