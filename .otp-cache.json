@@ -1,0 +1,12 @@
+{
+  "shubhjjj66@gmail.com": {
+    "code": "123456",
+    "expires": 1753828641973,
+    "attempts": 0
+  },
+  "test@example.com": {
+    "code": "123456",
+    "expires": 1753828460085,
+    "attempts": 0
+  }
+}
