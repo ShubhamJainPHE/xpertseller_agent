@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../database/connection'
 import { NotificationService } from '../utils/notifications'
-import { ComposioToolSet } from 'composio-core'
+// Disable Composio during build to prevent DataCloneError
+let ComposioToolSet: any = null
 import { OpenAI } from 'openai'
 
 interface WorkflowStep {
@@ -27,9 +28,9 @@ export class WorkflowOrchestrator {
     apiKey: process.env.OPENAI_API_KEY
   })
   
-  private static toolset = new ComposioToolSet({
+  private static toolset = ComposioToolSet ? new ComposioToolSet({
     apiKey: process.env.COMPOSIO_API_KEY
-  })
+  }) : null
 
   /**
    * 🎼 Master orchestrator - manages complex multi-platform workflows

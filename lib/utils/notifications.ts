@@ -1,9 +1,10 @@
-import { ComposioToolSet } from 'composio-core'
+// Disable Composio during build to prevent DataCloneError
+let ComposioToolSet: any = null
 import { supabaseAdmin } from '../database/connection'
 
-const toolset = new ComposioToolSet({
+const toolset = ComposioToolSet ? new ComposioToolSet({
   apiKey: process.env.COMPOSIO_API_KEY
-})
+}) : null
 
 interface NotificationOptions {
   sellerId: string

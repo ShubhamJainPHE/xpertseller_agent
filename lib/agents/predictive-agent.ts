@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../database/connection'
 import { NotificationService } from '../utils/notifications'
-import { ComposioToolSet } from 'composio-core'
+// Disable Composio during build to prevent DataCloneError
+let ComposioToolSet: any = null
 import { OpenAI } from 'openai'
 import { SecureQueries } from '../database/secure-queries'
 import { withErrorHandling, circuitBreakers } from '../utils/error-handling'
@@ -20,9 +21,9 @@ export class PredictiveAgent {
     apiKey: process.env.OPENAI_API_KEY!
   })
   
-  private static toolset = new ComposioToolSet({
+  private static toolset = ComposioToolSet ? new ComposioToolSet({
     apiKey: process.env.COMPOSIO_API_KEY!
-  })
+  }) : null
 
   /**
    * 🔮 Main predictive analysis - thinks 7-30 days ahead
