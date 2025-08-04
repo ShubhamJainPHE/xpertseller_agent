@@ -5,21 +5,17 @@ export async function POST(request: NextRequest) {
     // Generate a secure state parameter for CSRF protection
     const state = generateRandomString(32)
     
-    // Store state in a secure way (in production, use database or secure session)
-    // For demo, we'll include it in the response to be stored client-side
+    // Amazon SP-API OAuth parameters - Correct format for MD5101 fix
+    const redirectUri = process.env.AMAZON_REDIRECT_URI || 'http://localhost:3000/api/auth/amazon/callback'
+    const appId = process.env.AMAZON_APP_ID || 'amzn1.sp.solution.44de4ef2-6409-4543-ba0b-8dede40223f4'
     
-    // Amazon LWA OAuth parameters
-    const oauthParams = new URLSearchParams({
-      response_type: 'code',
-      client_id: process.env.AMAZON_CLIENT_ID || 'YOUR_AMAZON_CLIENT_ID',
-      redirect_uri: process.env.AMAZON_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/amazon/callback`,
-      state: state,
-      scope: 'sellingpartnerapi::notifications sellingpartnerapi::migration',
-      version: 'beta'
-    })
-
-    // Amazon Seller Central OAuth URL
-    const authUrl = `https://sellercentral.amazon.com/apps/authorize/consent?${oauthParams.toString()}`
+    // Try different OAuth URL formats to bypass MD5101 error
+    const authUrl = `https://sellercentral.amazon.com/apps/authorize/consent?application_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&version=beta`
+    
+    // Log the generated URL for debugging
+    console.log('🔗 Generated Amazon OAuth URL:', authUrl)
+    console.log('📋 App ID:', appId)
+    console.log('🔄 Redirect URI:', redirectUri)
 
     return NextResponse.json({
       success: true,

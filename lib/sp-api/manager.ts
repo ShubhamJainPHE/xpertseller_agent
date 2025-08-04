@@ -2,6 +2,19 @@ import { SPAPIClient, SPAPICredentials } from './client'
 import { OrdersService } from './services/orders'
 import { InventoryService } from './services/inventory'
 import { PricingService } from './services/pricing'
+import { SellersService } from './services/sellers'
+import { CatalogService } from './services/catalog'
+import { FinancesService } from './services/finances'
+import { ReportsService } from './services/reports'
+import { ListingsService } from './services/listings'
+import { NotificationsService } from './services/notifications'
+import { MessagingService } from './services/messaging'
+import { ShippingServiceV2 } from './services/shipping'
+import { FeedsService } from './services/feeds'
+import { APlusContentService } from './services/aplus-content'
+import { VehiclesService } from './services/vehicles'
+import { VendorService } from './services/vendor'
+import { SystemService } from './services/system'
 import { supabaseAdmin } from '../database/connection'
 
 export class SPAPIManager {
@@ -10,6 +23,19 @@ export class SPAPIManager {
     orders: OrdersService
     inventory: InventoryService
     pricing: PricingService
+    sellers: SellersService
+    catalog: CatalogService
+    finances: FinancesService
+    reports: ReportsService
+    listings: ListingsService
+    notifications: NotificationsService
+    messaging: MessagingService
+    shipping: ShippingServiceV2
+    feeds: FeedsService
+    aplusContent: APlusContentService
+    vehicles: VehiclesService
+    vendor: VendorService
+    system: SystemService
   }>()
 
   constructor() {
@@ -43,7 +69,20 @@ export class SPAPIManager {
             this.services.set(seller.id, {
               orders: new OrdersService(client),
               inventory: new InventoryService(client),
-              pricing: new PricingService(client)
+              pricing: new PricingService(client),
+              sellers: new SellersService(client),
+              catalog: new CatalogService(client),
+              finances: new FinancesService(client),
+              reports: new ReportsService(client),
+              listings: new ListingsService(client),
+              notifications: new NotificationsService(client),
+              messaging: new MessagingService(client),
+              shipping: new ShippingServiceV2(client),
+              feeds: new FeedsService(client),
+              aplusContent: new APlusContentService(client),
+              vehicles: new VehiclesService(client),
+              vendor: new VendorService(client),
+              system: new SystemService(client)
             })
           } else {
             console.warn(`SP-API client health check failed for seller ${seller.id}`)
@@ -108,7 +147,20 @@ export class SPAPIManager {
       this.services.set(sellerId, {
         orders: new OrdersService(client),
         inventory: new InventoryService(client),
-        pricing: new PricingService(client)
+        pricing: new PricingService(client),
+        sellers: new SellersService(client),
+        catalog: new CatalogService(client),
+        finances: new FinancesService(client),
+        reports: new ReportsService(client),
+        listings: new ListingsService(client),
+        notifications: new NotificationsService(client),
+        messaging: new MessagingService(client),
+        shipping: new ShippingServiceV2(client),
+        feeds: new FeedsService(client),
+        aplusContent: new APlusContentService(client),
+        vehicles: new VehiclesService(client),
+        vendor: new VendorService(client),
+        system: new SystemService(client)
       })
 
       return true

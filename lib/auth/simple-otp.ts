@@ -80,26 +80,10 @@ export class SimpleOTPService {
         console.log(`🔑 OTP for ${email}: ${otpCode}`)
         console.log('📧 Email delivery failed - configure email provider for production')
         
-        // Development-only: Allow fixed OTP for testing (NEVER in production)
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🚨 DEVELOPMENT MODE: Using fixed OTP 123456 for testing')
-          // Override the stored OTP with fixed code for development
-          otpStore.set(email.toLowerCase(), {
-            code: '123456',
-            expires: Date.now() + 10 * 60 * 1000,
-            attempts: 0
-          })
-          saveOTPCache()
-          
-          return {
-            success: true,
-            message: 'OTP sent. For development: use code 123456'
-          }
-        } else {
-          return {
-            success: false,
-            message: 'Unable to send OTP email. Please contact administrator to configure email service.'
-          }
+        // Production mode: Email must work
+        return {
+          success: false,
+          message: 'Unable to send OTP email. Please check your email address or contact support.'
         }
       }
 
@@ -171,7 +155,7 @@ Need help? Contact support@xpertseller.com
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'XpertSeller <onboarding@resend.dev>',
+            from: 'XpertSeller <noreply@xpertseller.com>',
             to: [email],
             subject: emailContent.subject,
             html: emailContent.html,

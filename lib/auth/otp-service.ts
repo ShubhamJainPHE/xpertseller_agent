@@ -138,7 +138,7 @@ Need help? Contact support@xpertseller.com
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'XpertSeller <auth@xpertseller.com>',
+            from: 'XpertSeller <shubham.jain.phe16@itbhu.ac.in>',
             to: [email],
             subject: emailContent.subject,
             html: emailContent.html,

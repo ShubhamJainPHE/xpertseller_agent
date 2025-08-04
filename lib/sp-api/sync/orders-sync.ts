@@ -74,23 +74,44 @@ export class OrdersSyncService {
   }
 
   private async processOrder(sellerId: string, order: Order): Promise<void> {
-    // Convert SP-API order to database format
+    // Validate required fields
+    if (!order.AmazonOrderId || !order.OrderStatus || !order.PurchaseDate) {
+      throw new Error('Order missing required fields: AmazonOrderId, OrderStatus, or PurchaseDate')
+    }
+
+    // Convert SP-API order to database format with proper validation
     const orderData = {
       seller_id: sellerId,
       amazon_order_id: order.AmazonOrderId,
       order_status: order.OrderStatus,
-      purchase_date: order.PurchaseDate,
-      last_update_date: order.LastUpdateDate,
-      fulfillment_channel: order.FulfillmentChannel,
-      sales_channel: order.SalesChannel,
-      order_total: order.OrderTotal ? {
-        amount: parseFloat(order.OrderTotal.Amount),
-        currency_code: order.OrderTotal.CurrencyCode
-      } : null,
-      marketplace_id: order.MarketplaceId,
-      is_prime: order.IsPrime || false,
-      is_business_order: order.IsBusinessOrder || false,
-      order_data: order // Store full order data as JSON
+      purchase_date: new Date(order.PurchaseDate).toISOString(),
+      last_update_date: order.LastUpdateDate ? new Date(order.LastUpdateDate).toISOString() : new Date().toISOString(),
+      fulfillment_channel: order.FulfillmentChannel || 'MFN',
+      sales_channel: order.SalesChannel || 'Amazon.com',
+      marketplace_id: order.MarketplaceId || 'ATVPDKIKX0DER',
+      is_prime: Boolean(order.IsPrime),
+      is_business_order: Boolean(order.IsBusinessOrder),
+      number_of_items_shipped: parseInt(order.NumberOfItemsShipped) || 0,
+      number_of_items_unshipped: parseInt(order.NumberOfItemsUnshipped) || 0
+    }
+
+    // Add order_total and order_data only if columns exist
+    if (order.OrderTotal) {
+      try {
+        orderData.order_total = {
+          amount: parseFloat(order.OrderTotal.Amount) || 0,
+          currency_code: order.OrderTotal.CurrencyCode || 'USD'
+        }
+      } catch (e) {
+        console.warn('Invalid order total data:', order.OrderTotal)
+      }
+    }
+
+    // Store full order data as JSON if column exists
+    try {
+      orderData.order_data = order
+    } catch (e) {
+      console.warn('Cannot store full order data, column may not exist')
     }
 
     // Upsert order data
@@ -105,21 +126,25 @@ export class OrdersSyncService {
       throw new Error(`Failed to save order: ${error.message}`)
     }
 
-    // Create fact stream event
-    await supabaseAdmin
-      .from('fact_stream')
-      .insert({
-        seller_id: sellerId,
-        event_type: 'order.updated',
-        event_category: 'performance',
-        data: {
-          amazon_order_id: order.AmazonOrderId,
-          order_status: order.OrderStatus,
-          order_total: order.OrderTotal,
-          fulfillment_channel: order.FulfillmentChannel
-        },
-        importance_score: 5
-      })
+    // Create fact stream event (with error handling)
+    try {
+      await supabaseAdmin
+        .from('fact_stream')
+        .insert({
+          seller_id: sellerId,
+          event_type: 'order.updated',
+          event_category: 'performance',
+          data: {
+            amazon_order_id: order.AmazonOrderId,
+            order_status: order.OrderStatus,
+            order_total: order.OrderTotal,
+            fulfillment_channel: order.FulfillmentChannel
+          },
+          importance_score: 5
+        })
+    } catch (factError) {
+      console.warn('Fact stream not available, skipping event logging:', factError)
+    }
   }
 
   private async syncOrderItems(sellerId: string, amazonOrderId: string): Promise<number> {
@@ -151,6 +176,11 @@ export class OrdersSyncService {
   }
 
   private async processOrderItem(sellerId: string, amazonOrderId: string, item: OrderItem): Promise<void> {
+    // Validate required fields
+    if (!item.OrderItemId || !item.ASIN || !item.QuantityOrdered) {
+      throw new Error('OrderItem missing required fields: OrderItemId, ASIN, or QuantityOrdered')
+    }
+
     // Find matching product by ASIN
     const { data: product } = await supabaseAdmin
       .from('products')
@@ -164,29 +194,57 @@ export class OrdersSyncService {
       return
     }
 
+    // Build order item data with validation
     const orderItemData = {
       seller_id: sellerId,
       product_id: product.id,
       amazon_order_id: amazonOrderId,
       order_item_id: item.OrderItemId,
       asin: item.ASIN,
-      seller_sku: item.SellerSKU,
-      title: item.Title,
-      quantity_ordered: item.QuantityOrdered,
-      quantity_shipped: item.QuantityShipped || 0,
-      item_price: item.ItemPrice ? {
-        amount: parseFloat(item.ItemPrice.Amount),
-        currency_code: item.ItemPrice.CurrencyCode
-      } : null,
-      item_tax: item.ItemTax ? {
-        amount: parseFloat(item.ItemTax.Amount),
-        currency_code: item.ItemTax.CurrencyCode
-      } : null,
-      promotion_discount: item.PromotionDiscount ? {
-        amount: parseFloat(item.PromotionDiscount.Amount),
-        currency_code: item.PromotionDiscount.CurrencyCode
-      } : null,
-      item_data: item // Store full item data as JSON
+      seller_sku: item.SellerSKU || null,
+      title: item.Title || null,
+      quantity_ordered: parseInt(item.QuantityOrdered) || 0,
+      quantity_shipped: parseInt(item.QuantityShipped) || 0
+    }
+
+    // Add JSONB fields only if columns exist
+    try {
+      if (item.ItemPrice) {
+        orderItemData.item_price = {
+          amount: parseFloat(item.ItemPrice.Amount) || 0,
+          currency_code: item.ItemPrice.CurrencyCode || 'USD'
+        }
+      }
+    } catch (e) {
+      console.warn('Cannot set item_price, column may not exist')
+    }
+
+    try {
+      if (item.ItemTax) {
+        orderItemData.item_tax = {
+          amount: parseFloat(item.ItemTax.Amount) || 0,
+          currency_code: item.ItemTax.CurrencyCode || 'USD'
+        }
+      }
+    } catch (e) {
+      console.warn('Cannot set item_tax, column may not exist')
+    }
+
+    try {
+      if (item.PromotionDiscount) {
+        orderItemData.promotion_discount = {
+          amount: parseFloat(item.PromotionDiscount.Amount) || 0,
+          currency_code: item.PromotionDiscount.CurrencyCode || 'USD'
+        }
+      }
+    } catch (e) {
+      console.warn('Cannot set promotion_discount, column may not exist')
+    }
+
+    try {
+      orderItemData.item_data = item
+    } catch (e) {
+      console.warn('Cannot set item_data, column may not exist')
     }
 
     // Upsert order item data
@@ -209,22 +267,35 @@ export class OrdersSyncService {
     const today = new Date().toISOString().split('T')[0]
     const revenue = item.ItemPrice ? parseFloat(item.ItemPrice.Amount) : 0
 
-    // Upsert daily sales data
+    // Get existing sales data for today
+    const { data: existingSales } = await supabaseAdmin
+      .from('sales_data')
+      .select('units_sold, units_ordered, revenue')
+      .eq('product_id', productId)
+      .eq('date', today)
+      .single()
+
+    // Calculate cumulative values
+    const cumulativeUnits = (existingSales?.units_sold || 0) + item.QuantityOrdered
+    const cumulativeRevenue = (existingSales?.revenue || 0) + revenue
+
+    // Upsert daily sales data with proper aggregation
     const { error } = await supabaseAdmin
       .from('sales_data')
       .upsert({
         product_id: productId,
         date: today,
-        units_sold: item.QuantityOrdered,
-        units_ordered: item.QuantityOrdered,
-        revenue: revenue
+        units_sold: cumulativeUnits,
+        units_ordered: cumulativeUnits,
+        revenue: cumulativeRevenue,
+        updated_at: new Date().toISOString()
       }, {
-        onConflict: 'product_id,date',
-        ignoreDuplicates: false
+        onConflict: 'product_id,date'
       })
 
     if (error) {
       console.error('Failed to update sales data:', error)
+      throw new Error(`Sales data update failed: ${error.message}`)
     }
   }
 }

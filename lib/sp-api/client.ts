@@ -90,7 +90,14 @@ class SPAPIRateLimiter {
   }
 
   async waitForToken(operation: string): Promise<void> {
+    let attempts = 0
+    const maxAttempts = 300 // 30 seconds max wait
+    
     while (!(await this.checkRateLimit(operation))) {
+      attempts++
+      if (attempts > maxAttempts) {
+        throw new Error(`Rate limit wait timeout for operation: ${operation}`)
+      }
       await new Promise(resolve => setTimeout(resolve, 100))
     }
   }
@@ -214,23 +221,54 @@ export class SPAPIClient {
     // Response interceptor for error handling and metrics
     this.axiosInstance.interceptors.response.use(
       (response) => {
+        // Reset circuit breaker on success (using private method via public interface)
+        // Circuit breaker success is handled automatically in execute() method
+        
         // Log successful request metrics
         this.logMetrics(response.config.url || '', response.status, Date.now())
         return response
       },
       async (error) => {
+        const config = error.config
+        config._retryCount = config._retryCount || 0
+        
+        // Check circuit breaker state
+        if (this.circuitBreaker.getState() === 'open') {
+          throw new Error('Circuit breaker is open - SP-API temporarily unavailable')
+        }
+
         // Handle token refresh on 401
-        if (error.response?.status === 401) {
-          await this.refreshAccessToken()
-          return this.axiosInstance.request(error.config)
+        if (error.response?.status === 401 && config._retryCount < 2) {
+          config._retryCount++
+          try {
+            await this.refreshAccessToken()
+            return this.axiosInstance.request(config)
+          } catch (refreshError) {
+            // Circuit breaker failure handled in execute() method
+            throw refreshError
+          }
         }
 
         // Handle rate limiting on 429
-        if (error.response?.status === 429) {
+        if (error.response?.status === 429 && config._retryCount < 3) {
+          config._retryCount++
           const retryAfter = parseInt(error.response.headers['retry-after'] || '60')
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000))
-          return this.axiosInstance.request(error.config)
+          const backoffDelay = Math.min(retryAfter * 1000, 60000) // Max 60 seconds
+          
+          await new Promise(resolve => setTimeout(resolve, backoffDelay))
+          return this.axiosInstance.request(config)
         }
+
+        // Handle server errors with exponential backoff
+        if (error.response?.status >= 500 && config._retryCount < 3) {
+          config._retryCount++
+          const backoffDelay = Math.pow(2, config._retryCount) * 1000 // Exponential backoff
+          
+          await new Promise(resolve => setTimeout(resolve, backoffDelay))
+          return this.axiosInstance.request(config)
+        }
+
+        // Circuit breaker failure recording handled in execute() method
 
         // Log error metrics
         this.logMetrics(
@@ -258,15 +296,17 @@ export class SPAPIClient {
 
   private async refreshAccessToken(): Promise<void> {
     try {
-      const response = await axios.post('https://api.amazon.com/auth/o2/token', {
-        grant_type: 'refresh_token',
-        refresh_token: this.credentials.refreshToken,
-        client_id: this.credentials.clientId,
-        client_secret: this.credentials.clientSecret
-      }, {
+      const params = new URLSearchParams()
+      params.append('grant_type', 'refresh_token')
+      params.append('refresh_token', this.credentials.refreshToken)
+      params.append('client_id', this.credentials.clientId)
+      params.append('client_secret', this.credentials.clientSecret)
+
+      const response = await axios.post('https://api.amazon.com/auth/o2/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        timeout: 10000
       })
 
       this.credentials.accessToken = response.data.access_token

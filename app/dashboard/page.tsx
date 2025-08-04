@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, AlertCircle, TrendingUp, Shield, Brain, ArrowRight } from 'lucide-react'
+import { AmazonConnectionStatus } from '@/components/amazon-connection-status'
 
 export default function DashboardPage() {
   return (
@@ -105,6 +106,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Amazon Connection Status */}
+        <AmazonConnectionStatus />
+
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
@@ -124,14 +128,14 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Ready for Production?</CardTitle>
+              <CardTitle>Data Analytics</CardTitle>
               <CardDescription>
-                Set up your real database and SP-API integration
+                View your Amazon business performance and insights
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" disabled>
-                Configure Real Database
+              <Button className="w-full" variant="outline">
+                View Analytics Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardContent>

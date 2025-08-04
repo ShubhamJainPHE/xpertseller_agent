@@ -67,7 +67,7 @@ export class PricingSyncService {
   private async processPricingData(sellerId: string, product: any, pricingData: any): Promise<void> {
     // Update competitor data
     await supabaseAdmin
-      .from('competitor_data')
+      .from('competitor_products')
       .upsert({
         product_id: product.id,
         competitor_asin: 'buy_box_winner',

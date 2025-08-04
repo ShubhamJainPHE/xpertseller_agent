@@ -29,18 +29,27 @@ async function createSessionToken(sellerId: string, email: string): Promise<stri
 async function createUserSession(sellerId: string, sessionToken: string, ip: string, userAgent: string) {
   const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours
 
-  const { error } = await supabase
-    .from('user_sessions')
-    .insert({
-      seller_id: sellerId,
-      session_token: sessionToken,
-      ip_address: ip,
-      user_agent: userAgent,
-      expires_at: expiresAt
-    })
+  try {
+    const { error } = await supabase
+      .from('user_sessions')
+      .insert({
+        seller_id: sellerId,
+        session_token: sessionToken,
+        ip_address: ip,
+        user_agent: userAgent,
+        expires_at: expiresAt
+      })
 
-  if (error) {
-    console.error('Error creating user session:', error)
+    if (error) {
+      console.error('Error creating user session:', error)
+      // Don't fail the login if session creation fails
+      return false
+    }
+    return true
+  } catch (error) {
+    console.error('Session table might not exist:', error)
+    // Don't fail the login if session table doesn't exist
+    return false
   }
 }
 
@@ -133,8 +142,11 @@ export async function POST(request: Request) {
     // Create session token
     const sessionToken = await createSessionToken(sellerId, email.toLowerCase())
 
-    // Store session in database
-    await createUserSession(sellerId, sessionToken, ip, userAgent)
+    // Store session in database (optional, won't fail login if it fails)
+    const sessionCreated = await createUserSession(sellerId, sessionToken, ip, userAgent)
+    if (!sessionCreated) {
+      console.log('⚠️ Session storage failed, but login will continue')
+    }
 
     // Update seller login info (skip fields that don't exist yet)
     await supabase

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     
     // Insert products one by one to see which one fails
     const createdProducts = []
-    let productErrors = []
+    const productErrors = []
 
     for (let i = 0; i < products.length; i++) {
       const product = products[i]

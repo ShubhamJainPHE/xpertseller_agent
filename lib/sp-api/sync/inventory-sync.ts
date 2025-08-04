@@ -63,7 +63,7 @@ export class InventorySyncService {
     // Find matching product
     let query = supabaseAdmin
       .from('products')
-      .select('id, reorder_point, velocity_7d')
+      .select('id, asin, reorder_point, velocity_7d')
       .eq('seller_id', sellerId)
 
     if (item.asin) {
@@ -87,8 +87,8 @@ export class InventorySyncService {
                            (details?.inboundShippedQuantity || 0) + 
                            (details?.inboundReceivingQuantity || 0)
 
-    // Update product inventory levels
-    const { error } = await supabaseAdmin
+    // Update product inventory levels (keep for compatibility)
+    await supabaseAdmin
       .from('products')
       .update({
         stock_level: stockLevel,
@@ -98,26 +98,51 @@ export class InventorySyncService {
       })
       .eq('id', product.id)
 
-    if (error) {
-      throw new Error(`Failed to update product inventory: ${error.message}`)
+    // ALSO update the dedicated FBA inventory table (proper approach)
+    const { error: fbaError } = await supabaseAdmin
+      .from('fba_inventory')
+      .upsert({
+        seller_id: sellerId,
+        asin: item.asin || product.asin,
+        sku: item.sellerSku,
+        fnsku: item.fnSku,
+        marketplace_id: 'ATVPDKIKX0DER', // Default to US, should get from seller
+        total_quantity: stockLevel,
+        sellable_quantity: availableQuantity,
+        unsellable_quantity: (details?.unfulfillableQuantity?.totalUnfulfillableQuantity || 0),
+        reserved_quantity: reservedQuantity,
+        inbound_working_quantity: details?.inboundWorkingQuantity || 0,
+        inbound_shipped_quantity: details?.inboundShippedQuantity || 0,
+        inbound_receiving_quantity: details?.inboundReceivingQuantity || 0,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'seller_id,asin,sku,marketplace_id'
+      })
+
+    if (fbaError) {
+      console.error('Failed to update FBA inventory table:', fbaError)
     }
 
-    // Create fact stream event for inventory update
-    await supabaseAdmin
-      .from('fact_stream')
-      .insert({
-        seller_id: sellerId,
-        asin: item.asin,
-        event_type: 'inventory.updated',
-        event_category: 'inventory',
-        data: {
-          stock_level: stockLevel,
-          available_quantity: availableQuantity,
-          reserved_quantity: reservedQuantity,
-          inbound_quantity: inboundQuantity
-        },
-        importance_score: this.calculateInventoryImportance(stockLevel, availableQuantity, product.reorder_point)
-      })
+    // Create fact stream event for inventory update (with error handling)
+    try {
+      await supabaseAdmin
+        .from('fact_stream')
+        .insert({
+          seller_id: sellerId,
+          asin: item.asin,
+          event_type: 'inventory.updated',
+          event_category: 'inventory',
+          data: {
+            stock_level: stockLevel,
+            available_quantity: availableQuantity,
+            reserved_quantity: reservedQuantity,
+            inbound_quantity: inboundQuantity
+          },
+          importance_score: this.calculateInventoryImportance(stockLevel, availableQuantity, product.reorder_point)
+        })
+    } catch (factError) {
+      console.warn('Fact stream not available, skipping event logging:', factError)
+    }
   }
 
   private async checkLowStockCondition(sellerId: string, item: InventorySummary): Promise<boolean> {
@@ -125,20 +150,24 @@ export class InventorySyncService {
 
     // Check for low stock conditions
     if (availableQuantity <= 10) {
-      await supabaseAdmin
-        .from('fact_stream')
-        .insert({
-          seller_id: sellerId,
-          asin: item.asin,
-          event_type: availableQuantity === 0 ? 'inventory.stockout' : 'inventory.low',
-          event_category: 'inventory',
-          data: {
-            available_quantity: availableQuantity,
-            urgency_level: availableQuantity === 0 ? 'critical' : 'high'
-          },
-          importance_score: availableQuantity === 0 ? 10 : 8,
-          requires_action: true
-        })
+      try {
+        await supabaseAdmin
+          .from('fact_stream')
+          .insert({
+            seller_id: sellerId,
+            asin: item.asin,
+            event_type: availableQuantity === 0 ? 'inventory.stockout' : 'inventory.low',
+            event_category: 'inventory',
+            data: {
+              available_quantity: availableQuantity,
+              urgency_level: availableQuantity === 0 ? 'critical' : 'high'
+            },
+            importance_score: availableQuantity === 0 ? 10 : 8,
+            requires_action: true
+          })
+      } catch (factError) {
+        console.warn('Fact stream not available, skipping low stock event:', factError)
+      }
 
       return true
     }

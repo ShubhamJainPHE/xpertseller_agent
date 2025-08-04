@@ -122,6 +122,8 @@ export default function HomePage() {
     setConnectionStatus('connecting');
     
     try {
+      console.log('HOME: Making request to /api/auth/amazon/connect...')
+      
       // Call our API to get the OAuth URL
       const response = await fetch('/api/auth/amazon/connect', {
         method: 'POST',
@@ -130,16 +132,27 @@ export default function HomePage() {
         },
       });
 
+      console.log('HOME: Response status:', response.status)
+      console.log('HOME: Response ok:', response.ok)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('HOME: Response error text:', errorText)
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const data = await response.json();
+      console.log('HOME: Response data:', data)
 
       if (data.success) {
         // Store the state for validation
         localStorage.setItem('oauthState', data.state);
         
         // Redirect to Amazon OAuth
+        console.log('HOME: Redirecting to:', data.authUrl)
         window.location.href = data.authUrl;
       } else {
-        throw new Error('Failed to initiate OAuth flow');
+        throw new Error(data.error || 'Failed to initiate OAuth flow');
       }
       
     } catch (error) {
