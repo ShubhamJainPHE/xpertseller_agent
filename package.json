@@ -12,7 +12,10 @@
     "db:seed": "tsx scripts/seed-database.ts",
     "mcp:supabase": "tsx lib/mcp/composio-supabase-server.ts",
     "mcp:communication": "tsx lib/mcp/composio-communication-server.ts",
-    "test:communication-mcp": "tsx test-communication-mcp.ts"
+    "mcp:communication-real": "tsx lib/mcp/communication-server-real.ts",
+    "test:communication-mcp": "tsx test-communication-mcp.ts",
+    "test:real-communication": "tsx test-real-communication.ts",
+    "test:direct-email": "tsx test-direct-email.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
