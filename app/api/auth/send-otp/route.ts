@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { SimpleOTPService } from '@/lib/auth/simple-otp'
+import { OTPService } from '@/lib/auth/otp-service'
 import { headers } from 'next/headers'
 
 // Rate limiting store (in production, use Redis)
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     console.log(`📧 OTP request from ${email} (IP: ${ip})`)
 
     // Send OTP
-    const result = await SimpleOTPService.sendOTP(email.toLowerCase().trim())
+    const result = await OTPService.sendOTP(email.toLowerCase().trim())
 
     // Log the attempt (for security monitoring)
     const logData = {
