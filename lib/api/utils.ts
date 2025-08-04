@@ -267,8 +267,7 @@ export function withPerformanceLogging(handler: (req: NextApiRequest, res: NextA
             status_code: res.statusCode
           }
         })
-        .then(() => {})
-        .catch(console.error)
+        .then(() => {}, (error: any) => console.error(error))
       
       console.log(`API ${method} ${url} - ${duration}ms - ${res.statusCode}`)
     }

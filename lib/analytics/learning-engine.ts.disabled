@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../database/connection'
-import { intelligenceEngine } from '../intelligence/intelligence-engine'
+// TODO: Re-enable when intelligence-engine is implemented
+// import { intelligenceEngine } from '../intelligence/intelligence-engine'
 import { OpenAI } from 'openai'
 
 export interface LearningOutcome {
@@ -863,6 +864,8 @@ Provide as JSON:
 
   private async cacheInsights(insights: any, agentType: string): Promise<void> {
     try {
+      // TODO: Re-enable when intelligence-engine is implemented
+      /*
       await intelligenceEngine.query({
         type: 'pattern_recognition',
         domain: 'cross_domain',
@@ -871,6 +874,8 @@ Provide as JSON:
           insights
         }
       })
+      */
+      console.log('Mock: caching insights for', agentType, insights)
     } catch (error) {
       console.error('Failed to cache insights:', error)
     }

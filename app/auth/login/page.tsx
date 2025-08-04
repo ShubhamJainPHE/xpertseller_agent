@@ -307,7 +307,9 @@ export default function SecureLoginPage() {
                     {otpCode.map((digit, index) => (
                       <Input
                         key={index}
-                        ref={(el) => otpRefs.current[index] = el}
+                        ref={(el) => {
+                          otpRefs.current[index] = el
+                        }}
                         type={showOtpCode ? "text" : "password"}
                         value={digit}
                         onChange={(e) => handleOtpChange(index, e.target.value)}

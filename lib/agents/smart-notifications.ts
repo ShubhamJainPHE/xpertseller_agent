@@ -96,8 +96,8 @@ export class SmartNotificationAgent {
       const hasEmailChannel = seller?.preferences?.notification_channels?.includes('email')
       
       // Return realistic defaults
-      const notifications = []
-      const responses = []
+      const notifications: any[] = []
+      const responses: any[] = []
       
       if (!notifications || notifications.length === 0) {
         return {

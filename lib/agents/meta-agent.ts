@@ -49,7 +49,7 @@ export class MetaAgent extends BaseAgent {
     })
 
     // Initialize specialized agents
-    this.agents = new Map([
+    this.agents = new Map<string, any>([
       ['loss_prevention', new LossPreventionAgent()],
       ['revenue_optimization', new RevenueOptimizationAgent()],
       ['strategic_intelligence', new StrategicIntelligenceAgent()]
@@ -98,7 +98,9 @@ export class MetaAgent extends BaseAgent {
     for (const [agentName, agent] of this.agents.entries()) {
       orchestrationPromises.push(
         this.runAgentWithMonitoring(agentName, agent, context)
-          .then(result => agentResults.set(agentName, result))
+          .then(result => {
+            agentResults.set(agentName, result)
+          })
           .catch(error => {
             console.error(`Agent ${agentName} failed:`, error)
             agentResults.set(agentName, { recommendations: [], insights: [], errors: [error.message] })
@@ -480,12 +482,13 @@ export class MetaAgent extends BaseAgent {
     score += (recommendation.confidence_score || 0.5) * 2
 
     // Urgency factor (0-2 points)
-    const urgencyScore = {
+    const urgencyScoreMap = {
       'critical': 2,
       'high': 1.5,
       'normal': 1,
       'low': 0.5
-    }[recommendation.urgency_level] || 1
+    } as const
+    const urgencyScore = urgencyScoreMap[recommendation.urgency_level as keyof typeof urgencyScoreMap] || 1
     score += urgencyScore
 
     return Math.min(10, Math.max(0, score))
@@ -658,7 +661,7 @@ export class MetaAgent extends BaseAgent {
     return {
       agentResponseRates,
       totalInteractions: outcomes?.length || 0,
-      avgSatisfaction: outcomes?.reduce((sum, o) => sum + (o.seller_satisfaction || 3), 0) / (outcomes?.length || 1)
+      avgSatisfaction: (outcomes?.reduce((sum, o) => sum + (o.seller_satisfaction || 3), 0) || 0) / (outcomes?.length || 1)
     }
   }
 

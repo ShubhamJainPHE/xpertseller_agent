@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         error: 'Failed to create minimal test data', 
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error occurred' 
       },
       { status: 500 }
     )

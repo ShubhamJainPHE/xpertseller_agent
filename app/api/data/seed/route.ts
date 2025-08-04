@@ -154,7 +154,7 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       console.error('Products creation error:', error)
-      throw new Error(`Failed to create products: ${error.message}`)
+      throw new Error(`Failed to create products: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
 
     // 2. Create Historical Sales Data (30 days)
@@ -363,7 +363,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Seeding error:', error)
     return NextResponse.json(
-      { error: 'Failed to seed data', details: error.message },
+      { error: 'Failed to seed data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

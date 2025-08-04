@@ -37,9 +37,10 @@ export class LossPreventionAgent {
       if (!spApi) throw new Error('SP-API service unavailable')
       
       // Get available Composio tools  
-      const tools = await this.toolset.getTools({
-        apps: ['gmail', 'slack', 'twilio', 'amazonsellercentral']
-      })
+      // const tools = await this.toolset.getTools({ // TODO: Update Composio API usage
+      //   apps: ['gmail', 'slack', 'twilio', 'amazonsellercentral']
+      // })
+      const tools: any[] = []
       
       // Run AI analysis with action capabilities
       await this.runAIAnalysis(sellerId, seller, spApi, tools)
@@ -715,7 +716,7 @@ export class LossPreventionAgent {
         'low': 'low' as const
       }
       
-      const urgency = urgencyMap[recommendation.urgency_level] || 'normal'
+      const urgency = urgencyMap[recommendation.urgency_level as keyof typeof urgencyMap] || 'normal'
       
       // Create notification message based on recommendation type
       let message = recommendation.description

@@ -20,7 +20,7 @@ export class AgentManager {
     this.metaAgent = new MetaAgent()
     
     // Initialize all agents
-    this.agents = new Map([
+    this.agents = new Map<string, any>([
       ['loss_prevention', new LossPreventionAgent()],
       ['revenue_optimization', new RevenueOptimizationAgent()],
       ['strategic_intelligence', new StrategicIntelligenceAgent()],
@@ -216,8 +216,8 @@ export class AgentManager {
       console.error('❌ Agent orchestration failed:', error)
       
       await this.logSystemEvent('orchestration_failed', {
-        error: error.message,
-        stack: error.stack
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
       })
     }
   }

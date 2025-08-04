@@ -153,7 +153,7 @@ export async function POST(request: Request) {
         console.log(`Created ${recommendationCount} recommendations`)
       }
     } catch (recErr) {
-      console.warn('Recommendations creation skipped:', recErr.message)
+      console.warn('Recommendations creation skipped:', recErr instanceof Error ? recErr.message : 'Unknown error')
     }
 
     return NextResponse.json({
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         error: 'Failed to create basic sample data', 
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error occurred' 
       },
       { status: 500 }
     )

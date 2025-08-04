@@ -1,7 +1,7 @@
 import { BaseAgent, AgentConfig, AgentContext, RecommendationInput, LearningData } from './base-agent'
 import { supabaseAdmin } from '../database/connection'
 import { spApiManager } from '../sp-api/manager'
-import { intelligenceEngine } from '../intelligence/intelligence-engine'
+// import { intelligenceEngine } from '../intelligence/intelligence-engine' // TODO: Create intelligence engine
 import { OpenAI } from 'openai'
 import { Anthropic } from '@anthropic-ai/sdk'
 
@@ -130,10 +130,10 @@ export class StrategicIntelligenceAgent extends BaseAgent {
       }
 
       // Analyze current categories and find expansion opportunities
-      const currentCategories = new Set(portfolioData.products.map(p => p.category).filter(Boolean))
+      const currentCategories = new Set(portfolioData.products.map((p: any) => p.category).filter(Boolean))
       const topPerformingCategories = portfolioData.products
-        .filter(p => (p.velocity_30d || 0) > 5)
-        .map(p => p.category)
+        .filter((p: any) => (p.velocity_30d || 0) > 5)
+        .map((p: any) => p.category)
         .filter(Boolean)
 
       // Use AI to identify market opportunities
@@ -282,12 +282,12 @@ For each opportunity, provide:
 Analyze the competitive landscape for this Amazon seller:
 
 Seller's Products & Performance:
-${competitiveData.products.slice(0, 10).map(p => `
+${competitiveData.products.slice(0, 10).map((p: any) => `
 - ${p.title} (${p.asin}): $${p.current_price}, ${p.velocity_30d} units/month, ${(p.buy_box_percentage_30d * 100).toFixed(1)}% Buy Box
 `).join('')}
 
 Competitor Analysis:
-${competitiveData.competitorAnalysis.slice(0, 20).map(c => `
+${competitiveData.competitorAnalysis.slice(0, 20).map((c: any) => `
 - ${c.competitor_asin}: $${c.price}, Buy Box: ${c.buy_box_winner}, Stock: ${c.stock_status}, ${c.date}
 `).join('')}
 
@@ -348,7 +348,7 @@ Provide analysis as JSON:
         }]
       })
 
-      const analysis = JSON.parse(response.content[0].text || '{}')
+      const analysis = JSON.parse((response.content[0] as any).text || '{}')
 
       // Process competitive threats
       for (const threat of analysis.threats || []) {
@@ -380,10 +380,10 @@ Provide analysis as JSON:
               }
             },
             supportingData: {
-              competitor_data: competitiveData.competitorAnalysis.filter(c => 
+              competitor_data: competitiveData.competitorAnalysis.filter((c: any) => 
                 c.competitor_asin.includes(threat.competitor.slice(-5))
               ),
-              affected_product_performance: competitiveData.products.filter(p => 
+              affected_product_performance: competitiveData.products.filter((p: any) => 
                 threat.affected_products?.includes(p.asin)
               )
             },
@@ -549,7 +549,7 @@ Provide recommendations as JSON:
             },
             supportingData: {
               current_portfolio_metrics: portfolioAnalysis.metrics,
-              affected_products_data: portfolioAnalysis.products.filter(p => 
+              affected_products_data: portfolioAnalysis.products.filter((p: any) => 
                 optimization.affected_products?.includes(p.asin)
               ),
               category_performance: portfolioAnalysis.categoryBreakdown
@@ -582,7 +582,7 @@ Provide recommendations as JSON:
 Analyze long-term market trends affecting this Amazon seller:
 
 Seller's Market Exposure:
-${marketExposure.categories.map(cat => `
+${marketExposure.categories.map((cat: any) => `
 - ${cat.name}: ${cat.revenue}% of revenue, ${cat.products} products, Growth: ${cat.growthRate}%
 `).join('')}
 
@@ -628,7 +628,7 @@ For each significant trend, provide:
         }]
       })
 
-      const trendAnalysis = JSON.parse(response.content[0].text || '{"trends": []}')
+      const trendAnalysis = JSON.parse((response.content[0] as any).text || '{"trends": []}')
 
       // Process trend analysis
       for (const trend of trendAnalysis.trends || []) {
@@ -666,7 +666,7 @@ For each significant trend, provide:
               }
             },
             supportingData: {
-              affected_categories_data: marketExposure.categories.filter(cat => 
+              affected_categories_data: marketExposure.categories.filter((cat: any) => 
                 trend.affected_categories?.includes(cat.name)
               ),
               current_market_position: marketExposure.positioning
@@ -961,10 +961,10 @@ Identify 2-3 expansion opportunities:
       })
 
       // Calculate concentration metrics
-      const sortedRevenues = monthlyRevenues.sort((a, b) => b - a)
-      const totalRevenue = sortedRevenues.reduce((sum, r) => sum + r, 0)
+      const sortedRevenues = monthlyRevenues.sort((a: number, b: number) => b - a)
+      const totalRevenue = sortedRevenues.reduce((sum: number, r: number) => sum + r, 0)
       const top20PercentCount = Math.ceil(products.length * 0.2)
-      const top20PercentRevenue = sortedRevenues.slice(0, top20PercentCount).reduce((sum, r) => sum + r, 0)
+      const top20PercentRevenue = sortedRevenues.slice(0, top20PercentCount).reduce((sum: number, r: number) => sum + r, 0)
       const revenueConcentration = totalRevenue > 0 ? top20PercentRevenue / totalRevenue : 0
 
       return {

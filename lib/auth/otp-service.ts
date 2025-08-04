@@ -181,7 +181,7 @@ Need help? Contact support@xpertseller.com
       try {
         const nodemailer = await import('nodemailer')
         
-        const transporter = nodemailer.createTransporter({
+        const transporter = nodemailer.createTransport({
           service: 'gmail',
           auth: {
             user: process.env.GMAIL_USER,
@@ -264,7 +264,7 @@ Need help? Contact support@xpertseller.com
         .eq('id', otpRecord.id)
 
       // Find or create seller account
-      const { data: seller, error: sellerError } = await supabase
+      let { data: seller, error: sellerError } = await supabase
         .from('sellers')
         .select('id, email')
         .eq('email', email)

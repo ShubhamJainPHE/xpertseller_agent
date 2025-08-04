@@ -1,7 +1,7 @@
 import { BaseAgent, AgentConfig, AgentContext, RecommendationInput, LearningData } from './base-agent'
 import { supabaseAdmin } from '../database/connection'
 import { spApiManager } from '../sp-api/manager'
-import { intelligenceEngine } from '../intelligence/intelligence-engine'
+// import { intelligenceEngine } from '../intelligence/intelligence-engine' // TODO: Create intelligence engine
 import { OpenAI } from 'openai'
 
 export class LossPreventionAgent extends BaseAgent {
@@ -101,16 +101,12 @@ export class LossPreventionAgent extends BaseAgent {
 
       // Enrich with intelligence insights
       const enrichedProducts = await Promise.all((products || []).map(async (product) => {
-        const insights = await intelligenceEngine.query({
-          type: 'pattern_recognition',
-          domain: 'inventory',
-          sellerId,
-          context: { asin: product.asin },
-          timeframe: {
-            start: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-            end: new Date()
-          }
-        })
+        // const insights = await intelligenceEngine.query({ // TODO: Implement intelligence engine
+        const insights = {
+          patterns: [],
+          risk_score: 0.5,
+          recommendations: []
+        }
 
         return {
           ...product,
@@ -359,16 +355,12 @@ Provide strategic analysis as JSON:
       if (currentPrice <= marginFloor * 1.1) return null // Already at or near floor
 
       // Get market intelligence for margin optimization
-      const marketAnalysis = await intelligenceEngine.query({
-        type: 'correlation_analysis',
-        domain: 'pricing',
-        sellerId: context.sellerId,
-        context: { 
-          asin: product.asin,
-          category: product.category,
-          price_range: 'similar_products'
-        }
-      })
+      // const marketAnalysis = await intelligenceEngine.query({ // TODO: Implement intelligence engine
+      const marketAnalysis = {
+        price_trends: [],
+        competitive_analysis: {},
+        recommendations: []
+      }
 
       const analysisPrompt = `
 Analyze margin protection strategy for this Amazon product:
@@ -384,7 +376,7 @@ Recent Performance:
 - Buy Box %: ${(product.buy_box_percentage_30d * 100).toFixed(1)}%
 - Velocity: ${product.velocity_30d} units/month
 
-Market Intelligence: ${JSON.stringify(marketAnalysis.slice(0, 2))}
+Market Intelligence: ${JSON.stringify(marketAnalysis)}
 
 Analyze margin protection needs:
 {
@@ -440,7 +432,7 @@ Analyze margin protection needs:
         urgency: 'normal',
         reasoning: {
           margin_analysis: marginStrategy,
-          market_intelligence: marketAnalysis.slice(0, 2),
+          market_intelligence: marketAnalysis,
           current_performance: {
             conversion_rate: product.conversion_rate_30d,
             buy_box_percentage: product.buy_box_percentage_30d

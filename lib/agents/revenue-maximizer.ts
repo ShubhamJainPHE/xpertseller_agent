@@ -88,7 +88,7 @@ export class RevenueMaximizer {
     const totalRevenue = salesData?.reduce((sum, s) => sum + (s.revenue || 0), 0) || 0
     const revenueVolatility = this.calculateVolatility(salesData?.map(s => s.revenue || 0) || [])
     const approvedRecommendations = recommendations?.filter(r => r.status === 'approved') || []
-    const successRate = recommendations?.length > 0 ? approvedRecommendations.length / recommendations.length : 0
+    const successRate = recommendations?.length && recommendations.length > 0 ? approvedRecommendations.length / recommendations.length : 0
 
     return {
       seller_risk_tolerance: seller?.risk_tolerance || 0.5,

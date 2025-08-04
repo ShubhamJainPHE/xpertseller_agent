@@ -85,39 +85,39 @@ export class PredictiveAgent {
 
     for (const product of products) {
       // Get sales velocity trend
-      const last30Days = product.sales_data?.filter(s => 
+      const last30Days = (product as any).sales_data?.filter((s: any) => 
         new Date(s.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       ) || []
       
-      const last7Days = last30Days.filter(s =>
+      const last7Days = last30Days.filter((s: any) =>
         new Date(s.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       )
 
       if (last7Days.length === 0) continue
 
-      const currentVelocity = last7Days.reduce((sum, s) => sum + (s.units_sold || 0), 0) / 7
-      const historicalVelocity = last30Days.reduce((sum, s) => sum + (s.units_sold || 0), 0) / 30
+      const currentVelocity = last7Days.reduce((sum: number, s: any) => sum + (s.units_sold || 0), 0) / 7
+      const historicalVelocity = last30Days.reduce((sum: number, s: any) => sum + (s.units_sold || 0), 0) / 30
       
       // Detect acceleration in sales
       const velocityTrend = currentVelocity / Math.max(historicalVelocity, 0.1)
       const projectedVelocity = currentVelocity * Math.max(velocityTrend, 1)
       
       // Account for advertising impact
-      const recentAdSpend = product.advertising_data?.filter(a =>
+      const recentAdSpend = (product as any).advertising_data?.filter((a: any) =>
         new Date(a.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      ).reduce((sum, a) => sum + (a.spend || 0), 0) || 0
+      ).reduce((sum: number, a: any) => sum + (a.spend || 0), 0) || 0
       
       const adImpactMultiplier = recentAdSpend > 0 ? 1.2 : 1.0
       const adjustedVelocity = projectedVelocity * adImpactMultiplier
       
       // Predict stockout date
-      const daysUntilStockout = product.stock_level / Math.max(adjustedVelocity, 0.1)
-      const leadTime = product.lead_time_days || 14
+      const daysUntilStockout = (product as any).stock_level / Math.max(adjustedVelocity, 0.1)
+      const leadTime = (product as any).lead_time_days || 14
       
       // Predict problems 7-21 days ahead
       if (daysUntilStockout <= leadTime + 7 && daysUntilStockout > 3) {
         const confidence = Math.min(0.95, 0.6 + (velocityTrend * 0.3))
-        const impact = adjustedVelocity * product.current_price * Math.max(0, leadTime - daysUntilStockout + 7)
+        const impact = adjustedVelocity * (product as any).current_price * Math.max(0, leadTime - daysUntilStockout + 7)
         
         predictions.push({
           type: 'stockout',
@@ -154,8 +154,8 @@ export class PredictiveAgent {
     const predictions: PredictionModel[] = []
 
     for (const product of products) {
-      const buyBox7d = product.buy_box_percentage_7d || 0
-      const buyBox30d = product.buy_box_percentage_30d || 0
+      const buyBox7d = (product as any).buy_box_percentage_7d || 0
+      const buyBox30d = (product as any).buy_box_percentage_30d || 0
       
       // Calculate trend
       const buyBoxTrend = buyBox7d - buyBox30d
@@ -164,7 +164,7 @@ export class PredictiveAgent {
       if (buyBoxTrend < -0.1 && buyBox7d < 0.8) {
         const daysToLoss = Math.max(1, buyBox7d / Math.abs(buyBoxTrend) * 7)
         const confidence = Math.min(0.9, Math.abs(buyBoxTrend) * 5)
-        const impact = product.velocity_30d * product.current_price * 0.6 // 60% revenue loss
+        const impact = (product as any).velocity_30d * (product as any).current_price * 0.6 // 60% revenue loss
         
         predictions.push({
           type: 'buybox_loss',
@@ -275,11 +275,11 @@ export class PredictiveAgent {
       // In real implementation, this would use web scraping or market data APIs
       
       const priceVolatility = Math.random() * 0.3 // Simulated competitor price volatility
-      const marketShare = product.buy_box_percentage_30d || 0.5
+      const marketShare = (product as any).buy_box_percentage_30d || 0.5
       
       if (priceVolatility > 0.15 && marketShare > 0.7) {
         // High-performing product with volatile competitor pricing = threat
-        const impact = product.velocity_30d * product.current_price * 0.3
+        const impact = (product as any).velocity_30d * (product as any).current_price * 0.3
         
         predictions.push({
           type: 'competitor_threat',

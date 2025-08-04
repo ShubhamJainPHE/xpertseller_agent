@@ -1,7 +1,7 @@
 import { BaseAgent, AgentConfig, AgentContext, RecommendationInput, LearningData } from './base-agent'
 import { supabaseAdmin } from '../database/connection'
 import { spApiManager } from '../sp-api/manager'
-import { intelligenceEngine } from '../intelligence/intelligence-engine'
+// import { intelligenceEngine } from '../intelligence/intelligence-engine' // TODO: Create intelligence engine
 import { OpenAI } from 'openai'
 
 export class RevenueOptimizationAgent extends BaseAgent {
@@ -105,17 +105,12 @@ export class RevenueOptimizationAgent extends BaseAgent {
 
       // Enrich with market intelligence
       return await Promise.all((products || []).map(async (product) => {
-        const marketIntel = await intelligenceEngine.query({
-          type: 'correlation_analysis',
-          domain: 'pricing',
-          sellerId,
-          context: { 
-            asin: product.asin,
-            category: product.category,
-            price_point: product.current_price
-          },
-          confidenceThreshold: 0.6
-        })
+        // const marketIntel = await intelligenceEngine.query({ // TODO: Implement intelligence engine
+        const marketIntel = {
+          price_correlation: 0.7,
+          competitive_advantage: 'medium',
+          market_trends: []
+        }
 
         return {
           ...product,
@@ -164,14 +159,14 @@ Margin Floor: $${product.margin_floor}
 Current Buy Box %: ${(product.buy_box_percentage_30d * 100).toFixed(1)}%
 Conversion Rate: ${(product.conversion_rate_30d * 100).toFixed(2)}%
 
-Competitor Prices: ${competitorPrices.map(p => `$${p}`).join(', ')}
-Average Competitor Price: $${(competitorPrices.reduce((a, b) => a + b, 0) / competitorPrices.length).toFixed(2)}
+Competitor Prices: ${competitorPrices.map((p: number) => `$${p}`).join(', ')}
+Average Competitor Price: $${(competitorPrices.reduce((a: number, b: number) => a + b, 0) / competitorPrices.length).toFixed(2)}
 
 Sales Performance (last 30 days):
-${salesHistory.slice(-14).map(s => `${s.date}: ${s.units} units, $${s.revenue}, ${s.sessions} sessions`).join('\n')}
+${salesHistory.slice(-14).map((s: any) => `${s.date}: ${s.units} units, $${s.revenue}, ${s.sessions} sessions`).join('\n')}
 
 Advertising Performance (last 14 days):
-${adData.map(a => `${a.date}: ${a.impressions} imp, ${a.clicks} clicks, $${a.spend} spend, ACOS: ${(a.acos * 100).toFixed(1)}%`).join('\n')}
+${adData.map((a: any) => `${a.date}: ${a.impressions} imp, ${a.clicks} clicks, $${a.spend} spend, ACOS: ${(a.acos * 100).toFixed(1)}%`).join('\n')}
 
 Market Intelligence: ${JSON.stringify(product.market_intelligence?.slice(0, 2) || [])}
 
@@ -245,7 +240,7 @@ Respond with JSON:
           ai_analysis: pricingStrategy,
           competitive_landscape: {
             competitor_count: competitorPrices.length,
-            price_position: product.current_price / (competitorPrices.reduce((a, b) => a + b, 0) / competitorPrices.length),
+            price_position: product.current_price / (competitorPrices.reduce((a: number, b: number) => a + b, 0) / competitorPrices.length),
             buy_box_share: product.buy_box_percentage_30d
           },
           performance_metrics: {
@@ -296,7 +291,7 @@ Category Benchmarks:
 - Average Session Percentage: ${(categoryBenchmarks.avgSessionPercentage * 100).toFixed(1)}%
 
 Recent Performance Trend:
-- Conversion Trend: ${conversionTrend.direction} ${conversionTrend.percentage}%
+- Conversion Trend: ${conversionTrend.direction} ${(conversionTrend.magnitude * 100).toFixed(1)}%
 - Recent Sessions: ${salesData.slice(-7).reduce((sum: number, s: any) => sum + (s.sessions || 0), 0)}
 - Recent Page Views: ${salesData.slice(-7).reduce((sum: number, s: any) => sum + (s.page_views || 0), 0)}
 
@@ -542,7 +537,7 @@ Analyze conversion rate optimization for this Amazon product:
 
 Product: ${product.title}
 Current Conversion Rate: ${(recentConversionRate * 100).toFixed(2)}%
-Conversion Trend: ${conversionTrend.direction} ${conversionTrend.percentage}%
+Conversion Trend: ${conversionTrend.direction} ${(conversionTrend.magnitude * 100).toFixed(1)}%
 
 Recent Performance Data:
 ${salesData.slice(-14).map((s: any) => `${s.date}: ${s.units} units, ${s.sessions} sessions, ${((s.units / s.sessions) * 100).toFixed(2)}% CVR`).join('\n')}
@@ -614,7 +609,7 @@ Identify conversion optimization opportunities:
         predictedImpact: conversionAnalysis.expectedRevenueIncrease,
         confidence: adjustedConfidence,
         riskLevel: 'low',
-        urgency: conversionTrend.direction === 'down' && conversionTrend.percentage > 10 ? 'high' : 'normal',
+        urgency: conversionTrend.direction === 'down' && conversionTrend.magnitude > 0.1 ? 'high' : 'normal',
         reasoning: {
           conversion_analysis: {
             current_rate: recentConversionRate,
@@ -779,23 +774,25 @@ Identify conversion optimization opportunities:
     }
   }
 
-  private calculateTrend(values: number[]): { direction: 'up' | 'down' | 'stable', percentage: number } {
-    if (values.length < 7) return { direction: 'stable', percentage: 0 }
+  protected calculateTrend(values: number[], periods = 7): { direction: 'up' | 'down' | 'stable', magnitude: number, confidence: number } {
+    if (values.length < periods) return { direction: 'stable', magnitude: 0, confidence: 0 }
 
-    const recent = values.slice(-7)
-    const previous = values.slice(-14, -7)
+    const recent = values.slice(-periods)
+    const previous = values.slice(-periods * 2, -periods)
 
     const recentAvg = recent.reduce((sum, val) => sum + val, 0) / recent.length
-    const previousAvg = previous.reduce((sum, val) => sum + val, 0) / previous.length
+    const previousAvg = previous.length > 0 ? previous.reduce((sum, val) => sum + val, 0) / previous.length : recentAvg
 
-    if (previousAvg === 0) return { direction: 'stable', percentage: 0 }
+    if (previousAvg === 0) return { direction: 'stable', magnitude: 0, confidence: 0 }
 
     const change = (recentAvg - previousAvg) / previousAvg
-    const percentage = Math.round(Math.abs(change * 100))
+    const magnitude = Math.abs(change)
+    const confidence = Math.min(1.0, values.length / periods)
 
     return {
       direction: change > 0.05 ? 'up' : change < -0.05 ? 'down' : 'stable',
-      percentage
+      magnitude,
+      confidence
     }
   }
 }

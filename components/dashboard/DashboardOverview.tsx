@@ -450,7 +450,7 @@ import React, { useState, useEffect } from 'react'
 
 export default function DashboardOverview() {
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState(null)
+  const [data, setData] = useState<{message: string; status: string} | null>(null)
 
   useEffect(() => {
     // Simulate loading for now

@@ -4,9 +4,13 @@ import { RevenueOptimizationAgent } from '@/lib/agents/revenue-optimization'
 import { NotificationService } from '@/lib/utils/notifications'
 
 export async function POST(request: NextRequest) {
+  let sellerId: string | undefined
   try {
     const body = await request.json()
-    const { sellerId, agentType = 'both', testMode = true } = body
+    const extractedData = body as { sellerId?: string; agentType?: string; testMode?: boolean }
+    sellerId = extractedData.sellerId
+    const agentType = extractedData.agentType || 'both'
+    const testMode = extractedData.testMode ?? true
 
     if (!sellerId) {
       return NextResponse.json(
@@ -68,7 +72,9 @@ export async function POST(request: NextRequest) {
     console.error('Agent test failed:', error)
     
     // 🚀 NEW: Send error notification
-    await sendTestErrorNotification(sellerId, error)
+    if (sellerId) {
+      await sendTestErrorNotification(sellerId, error)
+    }
     
     return NextResponse.json(
       { 

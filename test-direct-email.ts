@@ -103,11 +103,11 @@ Message ID: [Will be generated]
   } catch (error) {
     console.error('❌ Direct email test failed:', error)
     
-    if (error.message?.includes('API key')) {
+    if (error instanceof Error && error.message?.includes('API key')) {
       console.log('\n💡 Tip: Make sure your RESEND_API_KEY is correct in .env.local')
     }
     
-    if (error.message?.includes('domain')) {
+    if (error instanceof Error && error.message?.includes('domain')) {
       console.log('\n💡 Tip: Make sure alerts@xpertseller.com domain is verified in Resend')
       console.log('   You might need to use your verified domain instead')
     }

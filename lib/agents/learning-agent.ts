@@ -48,7 +48,7 @@ export class LearningAgent {
   /**
    * 📊 Gather outcomes from past recommendations and predictions
    */
-  private static async gatherOutcomes(sellerId: string): Promise<any[]> {
+  private static async gatherOutcomes(sellerId: string): Promise<{recommendations: any[], predictions: any[], outcomes: any[]}> {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     
     // Get recommendations from last 30 days with their outcomes
@@ -87,7 +87,7 @@ PREDICTIONS MADE: ${outcomes.predictions.length}
 ACTUAL OUTCOMES: ${outcomes.outcomes.length}
 
 Seller Behavior Patterns:
-${outcomes.recommendations.map(r => `
+${outcomes.recommendations.map((r: any) => `
 - ${r.recommendation_type}: ${r.status} (confidence: ${r.confidence_score})
 - Response time: ${r.updated_at ? new Date(r.updated_at).getTime() - new Date(r.created_at).getTime() : 'no response'}
 - Impact: $${r.predicted_impact}
