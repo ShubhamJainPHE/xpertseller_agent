@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { PredictiveAgent } from '@/lib/agents/predictive-agent'
 import { LearningAgent } from '@/lib/agents/learning-agent'
 import { WorkflowOrchestrator } from '@/lib/agents/workflow-orchestrator'
@@ -12,13 +13,19 @@ import { authenticateSeller, checkSellerPermission } from '@/lib/utils/auth'
 const rateLimiter = createRateLimiter(60 * 1000, 10)
 
 export async function POST(request: NextRequest) {
+  let sellerId: string | undefined
+  let action: string | undefined
+  
   try {
     // Environment validation
     validateEnvironment()
     
     // Parse and validate request body
     const body = aiCopilotRequestSchema.parse(await request.json())
-    const { sellerId, action, parameters = {} } = body
+    const bodyData = body as { sellerId?: string; action?: string; parameters?: any }
+    sellerId = bodyData.sellerId
+    action = bodyData.action
+    const parameters = bodyData.parameters || {}
     
     // Ensure sellerId is defined
     if (!sellerId) {
@@ -55,7 +62,7 @@ export async function POST(request: NextRequest) {
     
     // Permission check for advanced features
     const advancedActions = ['maximize_revenue', 'orchestrate_workflow']
-    if (advancedActions.includes(action)) {
+    if (action && advancedActions.includes(action)) {
       const hasPermission = await checkSellerPermission(sellerId, 'advanced_ai')
       if (!hasPermission) {
         return NextResponse.json(
@@ -63,6 +70,14 @@ export async function POST(request: NextRequest) {
           { status: 402 }
         )
       }
+    }
+
+    // Ensure action is defined
+    if (!action) {
+      return NextResponse.json(
+        { error: 'action is required' },
+        { status: 400 }
+      )
     }
 
     console.log(`🤖 AI Copilot executing: ${action} for seller: ${sellerId}`)
@@ -87,6 +102,12 @@ export async function POST(request: NextRequest) {
 
       case 'orchestrate_workflow':
         const { trigger, context } = parameters
+        if (!trigger) {
+          return NextResponse.json(
+            { error: 'trigger parameter is required for orchestrate_workflow' },
+            { status: 400 }
+          )
+        }
         await WorkflowOrchestrator.orchestrateWorkflows(sellerId, trigger, context)
         result = { message: `Workflow orchestrated for trigger: ${trigger}` }
         break
@@ -129,8 +150,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Log error securely (no sensitive data)
     console.error('AI Copilot action failed:', {
-      action,
-      sellerId: sellerId?.substring(0, 8) + '...', // Partial ID only
+      action: action || 'unknown',
+      sellerId: sellerId?.substring(0, 8) + '...' || 'unknown', // Partial ID only
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     })

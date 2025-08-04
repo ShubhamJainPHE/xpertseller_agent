@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         console.log(`Created ${salesRecords} sales records`)
       }
     } catch (salesErr) {
-      console.warn('Sales data creation skipped:', salesErr.message)
+      console.warn('Sales data creation skipped:', salesErr instanceof Error ? salesErr.message : 'Unknown error')
     }
 
     // 3. Try to create some recommendations if table exists
