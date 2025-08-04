@@ -179,7 +179,7 @@ Need help? Contact support@xpertseller.com
     // Method 3: Nodemailer + Gmail (completely free backup)
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
       try {
-        const nodemailer = require('nodemailer')
+        const nodemailer = await import('nodemailer')
         
         const transporter = nodemailer.createTransporter({
           service: 'gmail',
@@ -264,7 +264,7 @@ Need help? Contact support@xpertseller.com
         .eq('id', otpRecord.id)
 
       // Find or create seller account
-      let { data: seller, error: sellerError } = await supabase
+      const { data: seller, error: sellerError } = await supabase
         .from('sellers')
         .select('id, email')
         .eq('email', email)

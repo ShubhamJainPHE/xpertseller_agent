@@ -182,7 +182,7 @@ Need help? Contact support@xpertseller.com
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD && 
         process.env.GMAIL_USER !== 'your-gmail@gmail.com') {
       try {
-        const nodemailer = require('nodemailer')
+        const nodemailer = await import('nodemailer')
         
         const transporter = nodemailer.createTransporter({
           service: 'gmail',
@@ -249,7 +249,7 @@ Need help? Contact support@xpertseller.com
       saveOTPCache()
 
       // Find or create seller account
-      let { data: seller, error: sellerError } = await supabase
+      const { data: seller, error: sellerError } = await supabase
         .from('sellers')
         .select('id, email')
         .eq('email', emailKey)

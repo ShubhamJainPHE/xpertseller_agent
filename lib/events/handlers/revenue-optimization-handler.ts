@@ -98,7 +98,7 @@ export class RevenueOptimizationEventHandler {
       const previousValue = event.data.previous_value
       const change = ((currentValue - previousValue) / previousValue * 100)
 
-      let recommendationType = 'performance_improvement'
+      const recommendationType = 'performance_improvement'
       let title = ''
       let description = ''
       let actions: any = {}

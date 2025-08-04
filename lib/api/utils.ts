@@ -141,7 +141,7 @@ export async function getAuthenticatedUser(req: NextApiRequest) {
 }
 
 // Method handler wrapper
-export function withMethods(handlers: Record<string, Function>) {
+export function withMethods(handlers: Record<string, (req: NextApiRequest, res: NextApiResponse) => Promise<void>>) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const method = req.method?.toUpperCase() || 'GET'
     const handler = handlers[method]
@@ -242,7 +242,7 @@ export function sanitizeInput(input: any): any {
 }
 
 // Performance logging
-export function withPerformanceLogging(handler: Function) {
+export function withPerformanceLogging(handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void>) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const startTime = Date.now()
     const method = req.method

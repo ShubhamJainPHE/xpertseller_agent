@@ -14,7 +14,7 @@ export class SecureQueries {
   } = {}) {
     const { isActive = true, limit = 100, offset = 0, includeAnalytics = false } = options
     
-    let query = supabaseAdmin
+    const query = supabaseAdmin
       .from('products')
       .select(includeAnalytics ? `
         *,
@@ -40,7 +40,7 @@ export class SecureQueries {
   } = {}) {
     const { status, agentType, dateRange, limit = 50 } = options
     
-    let query = supabaseAdmin
+    const query = supabaseAdmin
       .from('recommendations')
       .select('*')
       .eq('seller_id', sellerId)
@@ -75,7 +75,7 @@ export class SecureQueries {
   } = {}) {
     const { eventType, category, limit = 100, since } = options
     
-    let query = supabaseAdmin
+    const query = supabaseAdmin
       .from('fact_stream')
       .select('*')
       .eq('seller_id', sellerId)
@@ -132,7 +132,7 @@ export class SecureQueries {
       version: expectedVersion ? expectedVersion + 1 : undefined
     }
     
-    let query = supabaseAdmin
+    const query = supabaseAdmin
       .from(tableName)
       .update(updateData)
       .eq('id', id)
