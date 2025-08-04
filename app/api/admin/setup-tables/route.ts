@@ -158,7 +158,7 @@ export async function POST() {
     return NextResponse.json(
       { 
         error: 'Failed to setup database tables', 
-        details: error.message,
+        details: error instanceof Error ? error.message : 'Unknown error occurred',
         suggestion: 'You may need to create tables manually in Supabase dashboard'
       },
       { status: 500 }
