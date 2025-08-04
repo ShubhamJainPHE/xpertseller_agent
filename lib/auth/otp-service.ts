@@ -315,7 +315,7 @@ Need help? Contact support@xpertseller.com
       return {
         success: true,
         message: 'Login successful!',
-        sellerId: seller.id
+        sellerId: seller?.id
       }
 
     } catch (error) {

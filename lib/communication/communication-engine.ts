@@ -330,7 +330,7 @@ export class CommunicationEngine {
         alert.id,
         channelType,
         'failed',
-        { error: error.message }
+        { error: error instanceof Error ? error.message : String(error) }
       )
     }
   }
@@ -889,17 +889,17 @@ Time is critical - act now to prevent lost sales!`,
         content: `You've lost the Buy Box for "{{product_title}}" (ASIN: {{asin}}).
 
 Current situation:
-- Competitor price: ${{competitor_price}}
-- Your price: ${{current_price}}
-- Price gap: ${{price_gap}}
+- Competitor price: $\{{competitor_price}}
+- Your price: $\{{current_price}}
+- Price gap: $\{{price_gap}}
 
-{{#if can_compete}}
-💡 Recommended action: Lower your price to ${{recommended_price}} to regain the Buy Box.
-Estimated daily impact: +${{estimated_impact}}
-{{else}}
-⚠️ Cannot compete without violating your margin floor (${{margin_floor}}).
+\{{#if can_compete}}
+💡 Recommended action: Lower your price to $\{{recommended_price}} to regain the Buy Box.
+Estimated daily impact: +$\{{estimated_impact}}
+\{{else}}
+⚠️ Cannot compete without violating your margin floor ($\{{margin_floor}}).
 Consider other strategies like improving your listing or customer service.
-{{/if}}`,
+\{{/if}}`,
         variables: ['product_title', 'asin', 'competitor_price', 'current_price', 'price_gap', 'can_compete', 'recommended_price', 'estimated_impact', 'margin_floor'],
         urgency_level: 'high',
         personalization: {

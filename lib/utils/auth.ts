@@ -71,10 +71,11 @@ export async function authenticateSeller(request: NextRequest): Promise<{
 }
 
 export function generateSellerToken(sellerId: string, expiresIn: string = '24h'): string {
+  const secret = process.env.JWT_SECRET!
   return jwt.sign(
     { sellerId },
-    process.env.JWT_SECRET!,
-    { expiresIn }
+    secret,
+    { expiresIn } as jwt.SignOptions
   )
 }
 

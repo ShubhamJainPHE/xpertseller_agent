@@ -54,7 +54,6 @@ class EventBus {
       host: process.env.UPSTASH_REDIS_HOST,
       port: parseInt(process.env.UPSTASH_REDIS_PORT || '6379'),
       password: process.env.UPSTASH_REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
       maxRetriesPerRequest: 3,
       lazyConnect: true,
       keepAlive: 30000,
@@ -99,7 +98,9 @@ class EventBus {
       )
 
       // Store in database for persistence and querying
-      await this.persistEvent(event, eventId)
+      if (eventId) {
+        await this.persistEvent(event, eventId)
+      }
 
       // Log publishing metrics
       await this.logSystemMetric('event_published', 1, {
@@ -109,7 +110,7 @@ class EventBus {
       })
 
       console.log(`Published event ${eventId} to stream ${streamKey}`)
-      return eventId
+      return eventId || 'unknown'
 
     } catch (error) {
       console.error('Failed to publish event:', error)
@@ -229,8 +230,8 @@ class EventBus {
           'STREAMS', streamKey, '>'
         )
 
-        if (results && results.length > 0) {
-          for (const [stream, messages] of results) {
+        if (results && Array.isArray(results) && results.length > 0) {
+          for (const [stream, messages] of results as Array<[string, Array<[string, string[]]>]>) {
             for (const [messageId, fields] of messages) {
               await this.processMessage(stream, messageId, fields, handlers)
             }
@@ -435,7 +436,7 @@ class EventBus {
     try {
       const { data: existingEvent } = await supabaseAdmin
         .from('fact_stream')
-        .select('processed_by, processing_status')
+        .select('processed_by, processing_status, metadata')
         .eq('id', eventId)
         .single()
 

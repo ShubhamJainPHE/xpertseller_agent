@@ -91,14 +91,14 @@ export class OrdersSyncService {
       marketplace_id: order.MarketplaceId || 'ATVPDKIKX0DER',
       is_prime: Boolean(order.IsPrime),
       is_business_order: Boolean(order.IsBusinessOrder),
-      number_of_items_shipped: parseInt(order.NumberOfItemsShipped) || 0,
-      number_of_items_unshipped: parseInt(order.NumberOfItemsUnshipped) || 0
+      number_of_items_shipped: parseInt(String(order.NumberOfItemsShipped || 0)) || 0,
+      number_of_items_unshipped: parseInt(String(order.NumberOfItemsUnshipped || 0)) || 0
     }
 
     // Add order_total and order_data only if columns exist
     if (order.OrderTotal) {
       try {
-        orderData.order_total = {
+        (orderData as any).order_total = {
           amount: parseFloat(order.OrderTotal.Amount) || 0,
           currency_code: order.OrderTotal.CurrencyCode || 'USD'
         }
@@ -109,7 +109,7 @@ export class OrdersSyncService {
 
     // Store full order data as JSON if column exists
     try {
-      orderData.order_data = order
+      (orderData as any).order_data = order
     } catch (e) {
       console.warn('Cannot store full order data, column may not exist')
     }
@@ -203,14 +203,14 @@ export class OrdersSyncService {
       asin: item.ASIN,
       seller_sku: item.SellerSKU || null,
       title: item.Title || null,
-      quantity_ordered: parseInt(item.QuantityOrdered) || 0,
-      quantity_shipped: parseInt(item.QuantityShipped) || 0
+      quantity_ordered: parseInt(String(item.QuantityOrdered || 0)) || 0,
+      quantity_shipped: parseInt(String(item.QuantityShipped || 0)) || 0
     }
 
     // Add JSONB fields only if columns exist
     try {
       if (item.ItemPrice) {
-        orderItemData.item_price = {
+        (orderItemData as any).item_price = {
           amount: parseFloat(item.ItemPrice.Amount) || 0,
           currency_code: item.ItemPrice.CurrencyCode || 'USD'
         }
@@ -221,7 +221,7 @@ export class OrdersSyncService {
 
     try {
       if (item.ItemTax) {
-        orderItemData.item_tax = {
+        (orderItemData as any).item_tax = {
           amount: parseFloat(item.ItemTax.Amount) || 0,
           currency_code: item.ItemTax.CurrencyCode || 'USD'
         }
@@ -232,7 +232,7 @@ export class OrdersSyncService {
 
     try {
       if (item.PromotionDiscount) {
-        orderItemData.promotion_discount = {
+        (orderItemData as any).promotion_discount = {
           amount: parseFloat(item.PromotionDiscount.Amount) || 0,
           currency_code: item.PromotionDiscount.CurrencyCode || 'USD'
         }
@@ -242,7 +242,7 @@ export class OrdersSyncService {
     }
 
     try {
-      orderItemData.item_data = item
+      (orderItemData as any).item_data = item
     } catch (e) {
       console.warn('Cannot set item_data, column may not exist')
     }

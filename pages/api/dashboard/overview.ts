@@ -27,7 +27,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     '90d': 90
   }
   
-  const daysBack = timeframes[timeframe]
+  const daysBack = timeframes[timeframe as keyof typeof timeframes] || 7
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000)
   const startDateStr = startDate.toISOString().split('T')[0]
   
@@ -156,7 +156,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   
   // Add projections if requested
   if (include_projections) {
-    overview.projections = await calculateProjections(user.seller.id, daysBack)
+    (overview as any).projections = await calculateProjections(user.seller.id, daysBack)
   }
   
   // Cache for 5 minutes

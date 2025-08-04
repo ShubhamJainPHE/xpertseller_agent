@@ -64,8 +64,10 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   }
   
   // Get total count for pagination
-  const { count: totalCount } = await query
-    .select('*', { count: 'exact', head: true })
+  const { count: totalCount } = await supabaseAdmin
+    .from('recommendations')
+    .select('id', { count: 'exact' })
+    .eq('seller_id', user.seller.id)
   
   // Get paginated results
   const { data: recommendations, error } = await query
