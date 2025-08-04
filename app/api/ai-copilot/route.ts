@@ -20,6 +20,14 @@ export async function POST(request: NextRequest) {
     const body = aiCopilotRequestSchema.parse(await request.json())
     const { sellerId, action, parameters = {} } = body
     
+    // Ensure sellerId is defined
+    if (!sellerId) {
+      return NextResponse.json(
+        { error: 'sellerId is required' },
+        { status: 400 }
+      )
+    }
+    
     // Authentication
     const auth = await authenticateSeller(request)
     if (!auth.success) {
