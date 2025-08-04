@@ -76,6 +76,12 @@ export async function POST(request: Request) {
       ip
     })
 
+    console.log('🔍 About to call OTPService.verifyOTP with:', {
+      email: email.toLowerCase().trim(),
+      otpCode: otpCode,
+      emailAfterTrim: email.toLowerCase().trim()
+    })
+
     // Input validation
     if (!email || typeof email !== 'string') {
       return NextResponse.json(
@@ -103,6 +109,13 @@ export async function POST(request: Request) {
 
     // Verify OTP
     const result = await OTPService.verifyOTP(email.toLowerCase().trim(), otpCode)
+    
+    console.log('🔍 OTPService.verifyOTP result:', {
+      success: result.success,
+      message: result.message,
+      sellerId: result.sellerId,
+      fullResult: result
+    })
 
     if (!result.success) {
       // Log failed attempt
