@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { SimpleOTPService } from '@/lib/auth/simple-otp'
+import { OTPService } from '@/lib/auth/otp-service'
 import { headers } from 'next/headers'
 import { SignJWT } from 'jose'
 import { createClient } from '@supabase/supabase-js'
@@ -61,7 +61,20 @@ export async function POST(request: Request) {
                '127.0.0.1'
     const userAgent = headersList.get('user-agent') || 'Unknown'
 
-    const { email, otpCode } = await request.json()
+    const requestBody = await request.json()
+    const { email, otpCode } = requestBody
+    
+    // Debug logging
+    console.log('🔍 OTP Verification Debug:', {
+      requestBody,
+      email: email,
+      emailType: typeof email,
+      emailLength: email?.length,
+      otpCode: otpCode,
+      otpCodeType: typeof otpCode,
+      otpCodeLength: otpCode?.length,
+      ip
+    })
 
     // Input validation
     if (!email || typeof email !== 'string') {
@@ -89,7 +102,7 @@ export async function POST(request: Request) {
     console.log(`🔐 OTP verification attempt for ${email} (IP: ${ip})`)
 
     // Verify OTP
-    const result = await SimpleOTPService.verifyOTP(email.toLowerCase().trim(), otpCode)
+    const result = await OTPService.verifyOTP(email.toLowerCase().trim(), otpCode)
 
     if (!result.success) {
       // Log failed attempt
