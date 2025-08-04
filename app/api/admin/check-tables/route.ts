@@ -46,7 +46,7 @@ export async function GET() {
     console.error('Table check error:', error)
     return NextResponse.json({ 
       error: 'Failed to check tables',
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 })
   }
 }
