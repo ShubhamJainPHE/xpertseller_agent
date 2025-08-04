@@ -1815,4 +1815,3 @@ Make it understandable for a business owner, not a data scientist.
 
 // Export singleton instance
 export const advancedLearningEngine = new AdvancedLearningEngine();
-}
