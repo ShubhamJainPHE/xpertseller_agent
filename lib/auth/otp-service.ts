@@ -80,6 +80,11 @@ export class OTPService {
    * Try sending email with multiple providers (fallback system)
    */
   private static async trySendEmail(email: string, otpCode: string): Promise<boolean> {
+    console.log('🔍 Available email services:', {
+      resend: !!process.env.RESEND_API_KEY,
+      gmail: !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD),
+      supabase: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
+    })
     const emailContent = {
       subject: '🔐 Your XpertSeller Login Code',
       html: `
@@ -138,7 +143,7 @@ Need help? Contact support@xpertseller.com
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'XpertSeller <shubham.jain.phe16@itbhu.ac.in>',
+            from: process.env.RESEND_FROM_EMAIL || 'XpertSeller <onboarding@resend.dev>',
             to: [email],
             subject: emailContent.subject,
             html: emailContent.html,
@@ -149,6 +154,9 @@ Need help? Contact support@xpertseller.com
         if (resendResponse.ok) {
           console.log('✅ OTP sent via Resend')
           return true
+        } else {
+          const responseText = await resendResponse.text()
+          console.error('Resend API failed:', resendResponse.status, responseText)
         }
       } catch (error) {
         console.warn('Resend failed, trying fallback:', error)
