@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     
     // Amazon SP-API OAuth parameters - Correct format for MD5101 fix
     const redirectUri = process.env.AMAZON_REDIRECT_URI || 'http://localhost:3000/api/auth/amazon/callback'
-    const appId = process.env.AMAZON_APP_ID || 'amzn1.sp.solution.44de4ef2-6409-4543-ba0b-8dede40223f4'
+    const appId = process.env.AMAZON_APP_ID || 'amzn1.sp.solution.d7953206-bf82-4cbf-9142-c5a33f56aedd'
     
     // Try different OAuth URL formats to bypass MD5101 error
     const authUrl = `https://sellercentral.amazon.com/apps/authorize/consent?application_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&version=beta`
