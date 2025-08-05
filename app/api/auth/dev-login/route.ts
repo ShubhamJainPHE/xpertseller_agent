@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     response.cookies.set('session-token', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for OAuth flows
       maxAge: 8 * 60 * 60, // 8 hours
       path: '/'
     })
