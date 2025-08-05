@@ -150,30 +150,6 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/dashboard/command-center-enhanced": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "Next-Action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/command-center-enhanced",
-      "dataRoute": "/dashboard/command-center-enhanced.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/dashboard/category-trends": {
       "experimentalBypassFor": [
         {
@@ -189,6 +165,30 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/dashboard/category-trends",
       "dataRoute": "/dashboard/category-trends.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/dashboard/command-center-enhanced": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "Next-Action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/dashboard/command-center-enhanced",
+      "dataRoute": "/dashboard/command-center-enhanced.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -246,7 +246,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/dashboard/product-setup": {
+    "/dashboard/inventory": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -259,32 +259,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/product-setup",
-      "dataRoute": "/dashboard/product-setup.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/dashboard/performance": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "Next-Action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/performance",
-      "dataRoute": "/dashboard/performance.rsc",
+      "srcRoute": "/dashboard/inventory",
+      "dataRoute": "/dashboard/inventory.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -318,6 +294,30 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/dashboard/performance": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "Next-Action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/dashboard/performance",
+      "dataRoute": "/dashboard/performance.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/home": {
       "experimentalBypassFor": [
         {
@@ -342,7 +342,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/dashboard/inventory": {
+    "/dashboard/product-setup": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -355,8 +355,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/inventory",
-      "dataRoute": "/dashboard/inventory.rsc",
+      "srcRoute": "/dashboard/product-setup",
+      "dataRoute": "/dashboard/product-setup.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
