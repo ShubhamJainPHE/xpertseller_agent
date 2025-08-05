@@ -145,7 +145,7 @@ async function getApiToken(
       }).toString()
 
   // Store debug info before making the request
-  const debugInfo = {
+  const debugInfo: any = {
     timestamp: new Date().toISOString(),
     requestUrl: url,
     requestBody: data,
@@ -172,7 +172,7 @@ async function getApiToken(
     
     if (!response.ok) {
       // Store failed response in debug data
-      const errorDebugInfo = {
+      const errorDebugInfo: any = {
         ...debugInfo,
         response: {
           status: response.status,
@@ -196,7 +196,7 @@ async function getApiToken(
     }
 
     const tokenData = JSON.parse(responseText)
-    const successDebugInfo = {
+    const successDebugInfo: any = {
       ...debugInfo,
       success: true,
       response: { status: 200, body: 'Success (tokens received)' }
@@ -208,7 +208,7 @@ async function getApiToken(
       refreshToken: tokenData.refresh_token || refreshToken,
     }
   } catch (err: any) {
-    const errorDebugInfo = {
+    const errorDebugInfo: any = {
       ...debugInfo,
       error: err.message
     }
