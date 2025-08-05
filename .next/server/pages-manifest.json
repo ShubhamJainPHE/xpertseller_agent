@@ -1,7 +1,7 @@
 {
-  "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/api/recommendations": "pages/api/recommendations.js",
+  "/_app": "pages/_app.js",
   "/api/dashboard/overview": "pages/api/dashboard/overview.js",
   "/api/events/stream": "pages/api/events/stream.js",
   "/_document": "pages/_document.js",
