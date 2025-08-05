@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/auth/supabase-client'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   const sendOTP = async () => {
     if (!email) {
@@ -23,19 +21,24 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true
-        }
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
       })
 
-      if (error) {
-        setError(error.message)
-      } else {
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        console.log('✅ OTP sent successfully')
         setStep('otp')
+      } else {
+        setError(data.error || 'Failed to send OTP')
       }
     } catch (error) {
+      console.error('Send OTP error:', error)
       setError('Network error. Please try again.')
     } finally {
       setLoading(false)
@@ -48,23 +51,33 @@ export default function LoginPage() {
       return
     }
 
+    if (!/^\d{6}$/.test(otp)) {
+      setError('OTP must be 6 digits')
+      return
+    }
+
     setLoading(true)
     setError('')
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email'
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otpCode: otp }),
       })
 
-      if (error) {
-        setError(error.message)
-      } else {
+      const data = await response.json()
+
+      if (response.ok && data.success) {
         console.log('🎉 OTP verification successful, redirecting...')
         router.push('/home')
+      } else {
+        setError(data.error || 'Invalid OTP code')
       }
     } catch (error) {
+      console.error('Verify OTP error:', error)
       setError('Network error. Please try again.')
     } finally {
       setLoading(false)
@@ -85,7 +98,7 @@ export default function LoginPage() {
             {step === 'email' ? 'Sign in to your account' : 'Enter verification code'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {step === 'email' ? 'Enter your email to receive an OTP' : `We sent a code to ${email}`}
+            {step === 'email' ? 'Enter your email to receive a 6-digit code' : `We sent a 6-digit code to ${email}`}
           </p>
         </div>
 
@@ -115,7 +128,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
               >
-                {loading ? 'Sending...' : 'Send OTP'}
+                {loading ? 'Sending...' : 'Send 6-Digit Code'}
               </button>
             </div>
           ) : (
