@@ -122,6 +122,11 @@ async function getApiToken(
 ) {
   const url = 'https://api.amazon.com/auth/o2/token'
   
+  console.log('🔑 Token exchange attempt:')
+  console.log('CLIENT_ID exists:', !!process.env.AMAZON_CLIENT_ID)
+  console.log('CLIENT_SECRET exists:', !!process.env.AMAZON_CLIENT_SECRET)
+  console.log('REDIRECT_URI:', process.env.AMAZON_REDIRECT_URI || 'using fallback')
+  
   const data = refreshToken
     ? new URLSearchParams({
         grant_type: 'refresh_token',
@@ -158,9 +163,10 @@ async function getApiToken(
       refreshToken: tokenData.refresh_token || refreshToken, // Keep existing refresh token if not returned
     }
   } catch (err: any) {
-    console.error(
-      `Failed to get access token. Error: ${err.message}`
-    )
+    console.error('❌ Token exchange failed:')
+    console.error('Request URL:', url)
+    console.error('Request body:', data)
+    console.error('Error:', err.message)
     throw err
   }
 }
