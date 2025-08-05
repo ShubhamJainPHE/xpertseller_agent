@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SellerAuth } from '@/lib/auth/seller'
 import { jwtVerify } from 'jose'
+import { setDebugData } from '@/lib/debug-store'
 
 export async function GET(request: NextRequest) {
   try {
@@ -116,9 +117,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Store debug data globally for debugging endpoint access
-let debugData: any = null
-
 async function getApiToken(
   refreshToken: string | null = null,
   code: string | null = null
@@ -147,7 +145,7 @@ async function getApiToken(
       }).toString()
 
   // Store debug info before making the request
-  debugData = {
+  const debugInfo = {
     timestamp: new Date().toISOString(),
     requestUrl: url,
     requestBody: data,
@@ -159,6 +157,7 @@ async function getApiToken(
       redirectUri: process.env.AMAZON_REDIRECT_URI || 'using fallback'
     }
   }
+  setDebugData(debugInfo)
 
   try {
     const response = await fetch(url, {
@@ -173,10 +172,13 @@ async function getApiToken(
     
     if (!response.ok) {
       // Store failed response in debug data
-      debugData.response = {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText
+      const errorDebugInfo = {
+        ...debugInfo,
+        response: {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText
+        }
       }
       
       console.error(`Token request failed: ${response.status} ${response.statusText}`, responseText)
@@ -184,24 +186,33 @@ async function getApiToken(
       // Try to parse error response
       try {
         const errorJson = JSON.parse(responseText)
-        debugData.parsedError = errorJson
+        errorDebugInfo.parsedError = errorJson
       } catch {
-        debugData.rawError = responseText
+        errorDebugInfo.rawError = responseText
       }
       
+      setDebugData(errorDebugInfo)
       throw new Error(`Token request failed: ${response.statusText}`)
     }
 
     const tokenData = JSON.parse(responseText)
-    debugData.success = true
-    debugData.response = { status: 200, body: 'Success (tokens received)' }
+    const successDebugInfo = {
+      ...debugInfo,
+      success: true,
+      response: { status: 200, body: 'Success (tokens received)' }
+    }
+    setDebugData(successDebugInfo)
     
     return {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token || refreshToken,
     }
   } catch (err: any) {
-    debugData.error = err.message
+    const errorDebugInfo = {
+      ...debugInfo,
+      error: err.message
+    }
+    setDebugData(errorDebugInfo)
     console.error('❌ Token exchange failed:')
     console.error('Request URL:', url)
     console.error('Request body:', data)
@@ -210,5 +221,4 @@ async function getApiToken(
   }
 }
 
-// Export debug data for the debug endpoint
-export { debugData }
+// Debug data is accessible via the global variable for debugging
