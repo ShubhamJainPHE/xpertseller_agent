@@ -1,86 +1,26 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { OTPService } from '@/lib/auth/otp-service'
+import { SecureSessionManager } from '@/lib/auth/secure-session'
+import { AuthMiddleware } from '@/lib/auth/auth-middleware'
 import { headers } from 'next/headers'
-import { SignJWT } from 'jose'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-)
-
-// JWT secret for session tokens
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key')
-
-async function createSessionToken(sellerId: string, email: string): Promise<string> {
-  const token = await new SignJWT({ 
-    sellerId, 
-    email,
-    type: 'session' 
+export async function POST(request: NextRequest) {
+  // Apply CSRF protection and rate limiting
+  return await AuthMiddleware.csrfProtection(request, async (req) => {
+    return await AuthMiddleware.rateLimit(req, async (rateLimitedReq) => {
+      return await handleOTPVerification(rateLimitedReq as NextRequest)
+    }, {
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // 5 attempts per 15 minutes per IP
+      message: 'Too many login attempts. Please try again later.'
+    })
   })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('8h') // 8 hour session
-    .sign(JWT_SECRET)
-
-  return token
 }
 
-async function createUserSession(sellerId: string, sessionToken: string, ip: string, userAgent: string) {
-  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours
-
+async function handleOTPVerification(request: NextRequest): Promise<NextResponse> {
   try {
-    const { error } = await supabase
-      .from('user_sessions')
-      .insert({
-        seller_id: sellerId,
-        session_token: sessionToken,
-        ip_address: ip,
-        user_agent: userAgent,
-        expires_at: expiresAt
-      })
-
-    if (error) {
-      console.error('Error creating user session:', error)
-      // Don't fail the login if session creation fails
-      return false
-    }
-    return true
-  } catch (error) {
-    console.error('Session table might not exist:', error)
-    // Don't fail the login if session table doesn't exist
-    return false
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for') || 
-               headersList.get('x-real-ip') || 
-               '127.0.0.1'
-    const userAgent = headersList.get('user-agent') || 'Unknown'
-
     const requestBody = await request.json()
     const { email, otpCode } = requestBody
-    
-    // Debug logging
-    console.log('🔍 OTP Verification Debug:', {
-      requestBody,
-      email: email,
-      emailType: typeof email,
-      emailLength: email?.length,
-      otpCode: otpCode,
-      otpCodeType: typeof otpCode,
-      otpCodeLength: otpCode?.length,
-      ip
-    })
-
-    console.log('🔍 About to call OTPService.verifyOTP with:', {
-      email: email.toLowerCase().trim(),
-      otpCode: otpCode,
-      emailAfterTrim: email.toLowerCase().trim()
-    })
 
     // Input validation
     if (!email || typeof email !== 'string') {
@@ -105,37 +45,18 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log(`🔐 OTP verification attempt for ${email} (IP: ${ip})`)
+    console.log(`🔐 Secure OTP verification attempt for ${email}`)
 
     // Verify OTP
     const result = await OTPService.verifyOTP(email.toLowerCase().trim(), otpCode)
-    
-    console.log('🔍 OTPService.verifyOTP result:', {
-      success: result.success,
-      message: result.message,
-      sellerId: result.sellerId,
-      fullResult: result
-    })
 
     if (!result.success) {
-      // Log failed attempt
-      const logData = {
-        email: email.toLowerCase(),
-        ip_address: ip,
-        user_agent: userAgent,
-        success: false,
-        failure_reason: result.message
-      }
-
-      await supabase.from('login_attempts').insert(logData)
-
       return NextResponse.json(
         { error: result.message },
         { status: 400 }
       )
     }
 
-    // The OTP service has already created the seller if needed
     const sellerId = result.sellerId
     
     if (!sellerId) {
@@ -144,72 +65,44 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    
-    // Check if this was a newly created account
-    const { data: sellerData } = await supabase
-      .from('sellers')
-      .select('business_context')
-      .eq('id', sellerId)
-      .single()
-    
-    const isNewUser = sellerData?.business_context?.isAutoCreated === true
 
-    // Log successful attempt
-    const logData = {
-      email: email.toLowerCase(),
-      ip_address: ip,
-      user_agent: userAgent,
-      success: true,
-      failure_reason: null
-    }
+    // Create secure session using SecureSessionManager
+    const sessionData = await SecureSessionManager.createSession(
+      sellerId,
+      email.toLowerCase(),
+      request
+    )
 
-    await supabase.from('login_attempts').insert(logData)
+    console.log(`✅ Secure session created for ${email}`)
 
-    // Create session token
-    const sessionToken = await createSessionToken(sellerId, email.toLowerCase())
-
-    // Store session in database (optional, won't fail login if it fails)
-    const sessionCreated = await createUserSession(sellerId, sessionToken, ip, userAgent)
-    if (!sessionCreated) {
-      console.log('⚠️ Session storage failed, but login will continue')
-    }
-
-    // Update seller login info (skip fields that don't exist yet)
-    await supabase
-      .from('sellers')
-      .update({
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', sellerId)
-
-    console.log(`✅ Successful login for ${email} ${isNewUser ? '(new user)' : '(existing user)'}`)
-
-    // Set HTTP-only cookie for session
+    // Create secure response with browser history protection
     const response = NextResponse.json({
       success: true,
-      message: isNewUser ? 'Welcome to XpertSeller! Your account has been created.' : 'Welcome back!',
+      message: 'Login successful! Redirecting securely...',
       seller: {
         id: sellerId,
         email: email.toLowerCase(),
-        verified: true,
-        isNewUser
+        verified: true
       },
-      redirect: isNewUser ? '/home?welcome=true' : '/home'
+      redirect: '/home'
     })
 
-    // Set secure session cookie
-    response.cookies.set('session-token', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // Changed from 'strict' to 'lax' for OAuth flows
-      maxAge: 8 * 60 * 60, // 8 hours
-      path: '/'
-    })
+    // Set secure HTTP-only cookies
+    const cookies = SecureSessionManager.createSecureCookies(
+      sessionData.accessToken,
+      sessionData.refreshToken
+    )
 
-    return response
+    response.headers.set('Set-Cookie', [
+      cookies.accessCookie,
+      cookies.refreshCookie
+    ].join(', '))
+
+    // Apply browser history protection
+    return AuthMiddleware.preventHistoryAccess(response)
 
   } catch (error) {
-    console.error('❌ Verify OTP API Error:', error)
+    console.error('❌ Secure OTP verification error:', error)
     return NextResponse.json(
       { error: 'Verification failed. Please try again.' },
       { status: 500 }
@@ -217,69 +110,28 @@ export async function POST(request: Request) {
   }
 }
 
-// Get current session info
-export async function GET(request: Request) {
-  try {
-    const headersList = await headers()
-    const sessionToken = headersList.get('cookie')?.split('session-token=')[1]?.split(';')[0]
+// Validate current session - secured endpoint
+export async function GET(request: NextRequest) {
+  return await AuthMiddleware.requireAuth(request, async (authenticatedReq) => {
+    try {
+      const user = authenticatedReq.user!
+      
+      return NextResponse.json({
+        success: true,
+        authenticated: true,
+        seller: {
+          id: user.sellerId,
+          email: user.email,
+          sessionId: user.sessionId
+        }
+      })
 
-    if (!sessionToken) {
+    } catch (error) {
+      console.error('❌ Session validation error:', error)
       return NextResponse.json(
-        { error: 'No session found' },
-        { status: 401 }
+        { error: 'Session validation failed' },
+        { status: 500 }
       )
     }
-
-    // Validate session
-    const { data: sessionData, error } = await supabase
-      .from('user_sessions')
-      .select(`
-        seller_id,
-        expires_at,
-        is_active,
-        sellers (
-          id,
-          email,
-          business_context,
-          onboarding_completed
-        )
-      `)
-      .eq('session_token', sessionToken)
-      .eq('is_active', true)
-      .single()
-
-    if (error || !sessionData) {
-      return NextResponse.json(
-        { error: 'Invalid session' },
-        { status: 401 }
-      )
-    }
-
-    // Check if session is expired
-    if (new Date() > new Date(sessionData.expires_at)) {
-      // Mark session as inactive
-      await supabase
-        .from('user_sessions')
-        .update({ is_active: false })
-        .eq('session_token', sessionToken)
-
-      return NextResponse.json(
-        { error: 'Session expired' },
-        { status: 401 }
-      )
-    }
-
-    return NextResponse.json({
-      success: true,
-      seller: sessionData.sellers,
-      expiresAt: sessionData.expires_at
-    })
-
-  } catch (error) {
-    console.error('❌ Session validation error:', error)
-    return NextResponse.json(
-      { error: 'Session validation failed' },
-      { status: 500 }
-    )
-  }
+  })
 }

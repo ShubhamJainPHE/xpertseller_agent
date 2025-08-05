@@ -1,7 +1,5 @@
-import { supabaseAdmin } from '../database/connection'
+import { unifiedMCPSystem } from '../mcp/unified-mcp-system'
 import { NotificationService } from '../utils/notifications'
-// Disable Composio during build to prevent DataCloneError
-import { ComposioToolSet } from 'composio-core'
 import { OpenAI } from 'openai'
 import { SecureQueries } from '../database/secure-queries'
 import { withErrorHandling, circuitBreakers } from '../utils/error-handling'
@@ -19,10 +17,6 @@ interface PredictionModel {
 export class PredictiveAgent {
   private static openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY!
-  })
-  
-  private static toolset = new ComposioToolSet({
-    apiKey: process.env.COMPOSIO_API_KEY || 'ak_m7G25pTBup6hdv2Mjn_v'
   })
 
   /**
@@ -74,13 +68,15 @@ export class PredictiveAgent {
    * 📦 Predict stockouts 7-21 days before they happen
    */
   private static async predictStockouts(sellerId: string): Promise<PredictionModel[]> {
-    const { data: products } = await SecureQueries.getSellerProducts(sellerId, {
-      isActive: true,
-      includeAnalytics: true,
-      limit: 50
+    // Use Unified MCP System for dynamic data access
+    const productsResult = await unifiedMCPSystem.queryDatabase('get_products', {
+      seller_id: sellerId,
+      limit: 50,
+      columns: '*'
     })
 
-    if (!products) return []
+    if (!productsResult.success || !productsResult.data.results) return []
+    const products = productsResult.data.results
 
     const predictions: PredictionModel[] = []
 
@@ -142,15 +138,15 @@ export class PredictiveAgent {
    * 🥇 Predict Buy Box loss based on competitor patterns
    */
   private static async predictBuyBoxLoss(sellerId: string): Promise<PredictionModel[]> {
-    // Get products with declining Buy Box performance
-    const { data: products } = await supabaseAdmin
-      .from('products')
-      .select('*')
-      .eq('seller_id', sellerId)
-      .eq('is_active', true)
-      .lt('buy_box_percentage_7d', 0.9) // Less than 90% in last 7 days
+    // Use Unified MCP System for Buy Box data
+    const buyBoxResult = await unifiedMCPSystem.queryDatabase('get_products', {
+      seller_id: sellerId,
+      where: 'buy_box_percentage_7d < 0.9',
+      limit: 100
+    })
 
-    if (!products) return []
+    if (!buyBoxResult.success || !buyBoxResult.data.results) return []
+    const products = buyBoxResult.data.results
 
     const predictions: PredictionModel[] = []
 

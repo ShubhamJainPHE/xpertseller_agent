@@ -1,10 +1,6 @@
-// Enable Composio for Gmail notifications
-import { ComposioToolSet } from 'composio-core'
+// Enable Unified MCP System for all notifications
+import { unifiedMCPSystem } from '../mcp/unified-mcp-system'
 import { supabaseAdmin } from '../database/connection'
-
-const toolset = new ComposioToolSet({
-  apiKey: process.env.COMPOSIO_API_KEY || 'ak_m7G25pTBup6hdv2Mjn_v'
-})
 
 interface NotificationOptions {
   sellerId: string
@@ -67,13 +63,13 @@ ${options.link ? `View Details: ${options.link}` : ''}
 
 Reply STOP to unsubscribe`
 
-      await toolset.executeAction({
-        action: 'whatsapp_send_message',
-        params: {
-          to: phoneNumber,
-          message: message
-        }
-      })
+      // WhatsApp via Unified MCP System (Composio integration)
+      await unifiedMCPSystem.sendNotification(
+        phoneNumber,
+        'XpertSeller Alert',
+        message,
+        'high'
+      )
       
       console.log(`📱 WhatsApp sent to ${phoneNumber}`)
     } catch (error) {
@@ -133,15 +129,12 @@ Reply STOP to unsubscribe`
         </html>
       `
 
-      await toolset.executeAction({
-        action: 'gmail_send_email', 
-        params: {
-          recipient_email: email,
-          subject: `${urgencyEmoji} ${options.title}`,
-          body: htmlContent,
-          is_html: true
-        }
-      })
+      await unifiedMCPSystem.sendNotification(
+        email,
+        `${urgencyEmoji} ${options.title}`,
+        htmlContent,
+        options.urgency
+      )
       
       console.log(`📧 Email sent to ${email}`)
     } catch (error) {

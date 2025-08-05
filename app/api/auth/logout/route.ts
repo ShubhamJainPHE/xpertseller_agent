@@ -1,99 +1,87 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { headers } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
+import { SecureSessionManager } from '@/lib/auth/secure-session'
+import { AuthMiddleware } from '@/lib/auth/auth-middleware'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-)
+export async function POST(request: NextRequest) {
+  return await AuthMiddleware.requireAuth(request, async (authenticatedReq) => {
+    try {
+      const user = authenticatedReq.user!
+      
+      console.log(`🔐 Secure logout initiated for user: ${user.email}`)
 
-export async function POST(request: Request) {
-  try {
-    const headersList = await headers()
-    const sessionToken = headersList.get('cookie')?.split('session-token=')[1]?.split(';')[0]
+      // Invalidate the current session
+      await SecureSessionManager.invalidateSession(user.sessionId)
 
-    if (sessionToken) {
-      // Mark session as inactive in database
-      await supabase
-        .from('user_sessions')
-        .update({ 
-          is_active: false,
-          last_activity: new Date().toISOString()
-        })
-        .eq('session_token', sessionToken)
+      // Create response with session cleared
+      const response = NextResponse.json({
+        success: true,
+        message: 'Logged out successfully'
+      })
 
-      console.log('🚪 User logged out successfully')
+      // Clear authentication cookies
+      response.cookies.delete('auth_token')
+      response.cookies.delete('refresh_token')
+
+      // Apply browser history protection to prevent cached access
+      const secureResponse = AuthMiddleware.preventHistoryAccess(response)
+
+      console.log(`✅ Secure logout completed for user: ${user.email}`)
+      
+      return secureResponse
+
+    } catch (error) {
+      console.error('❌ Secure logout error:', error)
+      
+      // Even if logout fails, clear cookies for security
+      const response = NextResponse.json(
+        { error: 'Logout failed, but session cleared' },
+        { status: 500 }
+      )
+      
+      response.cookies.delete('auth_token')
+      response.cookies.delete('refresh_token')
+      
+      return AuthMiddleware.preventHistoryAccess(response)
     }
-
-    // Clear the session cookie
-    const response = NextResponse.json({
-      success: true,
-      message: 'Logged out successfully'
-    })
-
-    response.cookies.delete('session-token')
-    
-    return response
-
-  } catch (error) {
-    console.error('❌ Logout error:', error)
-    
-    // Still clear the cookie even if database update fails
-    const response = NextResponse.json({
-      success: true,
-      message: 'Logged out successfully'
-    })
-
-    response.cookies.delete('session-token')
-    
-    return response
-  }
+  })
 }
 
 // Logout all sessions for current user
-export async function DELETE(request: Request) {
-  try {
-    const headersList = await headers()
-    const sellerId = headersList.get('x-seller-id')
+export async function DELETE(request: NextRequest) {
+  return await AuthMiddleware.requireAuth(request, async (authenticatedReq) => {
+    try {
+      const user = authenticatedReq.user!
+      
+      console.log(`🔐 Logout all sessions initiated for user: ${user.email}`)
 
-    if (!sellerId) {
-      return NextResponse.json(
-        { error: 'No active session found' },
-        { status: 401 }
-      )
-    }
+      // Invalidate all sessions for this user
+      await SecureSessionManager.invalidateAllSessions(user.sellerId)
 
-    // Mark all sessions as inactive for this seller
-    const { error } = await supabase
-      .from('user_sessions')
-      .update({ 
-        is_active: false,
-        last_activity: new Date().toISOString()
+      const response = NextResponse.json({
+        success: true,
+        message: 'All sessions terminated successfully'
       })
-      .eq('seller_id', sellerId)
-      .eq('is_active', true)
 
-    if (error) {
-      console.error('Error logging out all sessions:', error)
+      // Clear authentication cookies
+      response.cookies.delete('auth_token')
+      response.cookies.delete('refresh_token')
+
+      console.log(`✅ All sessions terminated for user: ${user.email}`)
+      
+      return AuthMiddleware.preventHistoryAccess(response)
+
+    } catch (error) {
+      console.error('❌ Logout all sessions error:', error)
+      
+      const response = NextResponse.json(
+        { error: 'Failed to terminate all sessions' },
+        { status: 500 }
+      )
+      
+      response.cookies.delete('auth_token')
+      response.cookies.delete('refresh_token')
+      
+      return AuthMiddleware.preventHistoryAccess(response)
     }
-
-    console.log(`🚪 All sessions logged out for seller: ${sellerId}`)
-
-    // Clear the current session cookie
-    const response = NextResponse.json({
-      success: true,
-      message: 'All sessions logged out successfully'
-    })
-
-    response.cookies.delete('session-token')
-    
-    return response
-
-  } catch (error) {
-    console.error('❌ Logout all sessions error:', error)
-    return NextResponse.json(
-      { error: 'Logout failed' },
-      { status: 500 }
-    )
-  }
+  })
 }

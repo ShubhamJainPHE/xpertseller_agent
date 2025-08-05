@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key')
+import { AuthMiddleware } from '@/lib/auth/auth-middleware'
 
 // Protected routes that require authentication
 const protectedPaths = [
   '/dashboard',
   '/home',
-  '/api/dashboard'
+  '/settings',
+  '/profile',
+  '/api/dashboard',
+  '/api/sellers',
+  '/api/products',
+  '/api/analytics'
 ]
 
 // Public routes that don't require authentication
 const publicPaths = [
   '/',
-  '/auth',
-  '/api/auth',
-  '/api/sellers', // Allow user registration
-  '/api/debug', // Allow debug endpoints
-  '/api/admin', // Allow admin endpoints
-  '/api/amazon', // Allow Amazon sync endpoints
-  '/admin'
+  '/auth/login',
+  '/auth/register', 
+  '/api/auth/send-otp',
+  '/api/auth/verify-otp',
+  '/api/health',
+  '/api/debug',
+  '/api/admin',
+  '/api/amazon/oauth'
 ]
 
 export async function middleware(request: NextRequest) {
@@ -35,63 +39,54 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  console.log(`🔒 Middleware checking: ${pathname}`)
+
   // Check if route requires authentication
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
 
-  // Allow public paths
-  if (isPublicPath && !isProtectedPath) {
-    return NextResponse.next()
-  }
+  // Use AuthMiddleware for page access validation
+  const accessValidation = await AuthMiddleware.validatePageAccess(request)
 
-  // For protected paths, verify session
   if (isProtectedPath) {
-    const sessionToken = request.cookies.get('session-token')?.value
-
-    if (!sessionToken) {
-      console.log(`🔒 No session token for ${pathname}, redirecting to login`)
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-
-    try {
-      // Verify JWT token
-      const { payload } = await jwtVerify(sessionToken, JWT_SECRET)
-      
-      if (!payload.sellerId || !payload.email) {
-        throw new Error('Invalid token payload')
-      }
-
-      // Add seller info to request headers for API routes
-      const requestHeaders = new Headers(request.headers)
-      requestHeaders.set('x-seller-id', payload.sellerId as string)
-      requestHeaders.set('x-seller-email', payload.email as string)
-
-      console.log(`✅ Valid session for ${payload.email} accessing ${pathname}`)
-
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders
-        }
-      })
-
-    } catch (error) {
-      console.log(`❌ Invalid session token for ${pathname}:`, error)
-      
-      // Clear invalid session cookie
+    // Protected route - require authentication
+    if (!accessValidation.authenticated) {
+      console.log(`🔒 Unauthenticated access to ${pathname}, redirecting to login`)
       const response = NextResponse.redirect(new URL('/auth/login', request.url))
-      response.cookies.delete('session-token')
-      
-      return response
+      return AuthMiddleware.preventHistoryAccess(response)
     }
-  }
 
-  // Default: allow the request
-  return NextResponse.next()
+    // User is authenticated, allow access with security headers
+    console.log(`✅ Authenticated access to ${pathname}`)
+    const response = NextResponse.next()
+    return AuthMiddleware.preventHistoryAccess(response)
+
+  } else if (isPublicPath) {
+    // Public route - check if authenticated user should be redirected
+    if (accessValidation.shouldRedirect && accessValidation.redirectTo) {
+      console.log(`🔄 Redirecting authenticated user from ${pathname} to ${accessValidation.redirectTo}`)
+      return NextResponse.redirect(new URL(accessValidation.redirectTo, request.url))
+    }
+
+    // Allow public access
+    return NextResponse.next()
+
+  } else {
+    // Unknown route - treat as protected by default for security
+    if (!accessValidation.authenticated) {
+      console.log(`🔒 Unknown route ${pathname} treated as protected, redirecting to login`)
+      const response = NextResponse.redirect(new URL('/auth/login', request.url))
+      return AuthMiddleware.preventHistoryAccess(response)
+    }
+
+    // Authenticated access to unknown route
+    const response = NextResponse.next()
+    return AuthMiddleware.preventHistoryAccess(response)
+  }
 }
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/home/:path*'
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

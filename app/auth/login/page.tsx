@@ -144,22 +144,13 @@ export default function SecureLoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        setSuccess('Login successful! Redirecting...')
+        setSuccess('Login successful! Redirecting securely...')
         
-        // Store seller info in localStorage for immediate access
-        localStorage.setItem('sellerId', data.seller.id)
-        localStorage.setItem('sellerInfo', JSON.stringify({
-          name: email.split('@')[0],
-          businessName: 'Your Business',
-          email: email,
-          geography: 'United States',
-          phoneNumber: ''
-        }))
+        // No localStorage storage - using secure HTTP-only cookies
+        console.log('🔐 Secure authentication successful')
 
-        // Redirect to dashboard
-        setTimeout(() => {
-          window.location.href = data.redirect || '/home'
-        }, 1500)
+        // Redirect to dashboard immediately (no delay needed for localStorage)
+        window.location.href = data.redirect || '/home'
       } else {
         setError(data.error || 'Invalid OTP code')
         // Clear the OTP inputs on error
