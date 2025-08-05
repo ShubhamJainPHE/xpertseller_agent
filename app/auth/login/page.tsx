@@ -1,3 +1,10 @@
+// ===============================================================================
+// OLD GRAY LOGIN PAGE - COMMENTED OUT (REPLACED BY BEAUTIFUL BLUE LOGIN ON /)
+// This page is preserved for reference but no longer used
+// The new login functionality is integrated into the root page (app/page.tsx)
+// ===============================================================================
+
+/*
 'use client'
 
 import { useState } from 'react'
@@ -167,6 +174,32 @@ export default function LoginPage() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+*/
+
+// ===============================================================================
+// TEMPORARY REDIRECT TO NEW LOGIN PAGE
+// Remove this component entirely once testing is complete
+// ===============================================================================
+
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function LoginPageRedirect() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Redirect to root page which now has the beautiful blue login
+    router.replace('/')
+  }, [router])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+      <div className="text-white text-lg">Redirecting to login...</div>
     </div>
   )
 }
