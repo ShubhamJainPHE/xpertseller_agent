@@ -51,6 +51,7 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     const result = await OTPService.verifyOTP(email.toLowerCase().trim(), otpCode)
 
     if (!result.success) {
+      console.log(`❌ OTP verification failed for ${email}: ${result.message}`)
       return NextResponse.json(
         { error: result.message },
         { status: 400 }
@@ -58,8 +59,10 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     }
 
     const sellerId = result.sellerId
+    console.log(`✅ OTP verified for ${email}, sellerId: ${sellerId}`)
     
     if (!sellerId) {
+      console.log(`❌ No sellerId found for ${email}`)
       return NextResponse.json(
         { error: 'Authentication failed. Please try again.' },
         { status: 400 }
@@ -67,13 +70,14 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     }
 
     // Create secure session using SecureSessionManager
+    console.log(`🔄 Creating secure session for ${email}...`)
     const sessionData = await SecureSessionManager.createSession(
       sellerId,
       email.toLowerCase(),
       request
     )
 
-    console.log(`✅ Secure session created for ${email}`)
+    console.log(`✅ Secure session created for ${email}, sessionId: ${sessionData.sessionId}`)
 
     // Create secure response with browser history protection
     const response = NextResponse.json({
@@ -93,10 +97,13 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
       sessionData.refreshToken
     )
 
-    response.headers.set('Set-Cookie', [
-      cookies.accessCookie,
-      cookies.refreshCookie
-    ].join(', '))
+    console.log(`🍪 Setting cookies for ${email}:`)
+    console.log(`   Access cookie: ${cookies.accessCookie}`)
+    console.log(`   Refresh cookie: ${cookies.refreshCookie}`)
+
+    // Set cookies individually (multiple Set-Cookie headers)
+    response.headers.append('Set-Cookie', cookies.accessCookie)
+    response.headers.append('Set-Cookie', cookies.refreshCookie)
 
     // Apply browser history protection
     return AuthMiddleware.preventHistoryAccess(response)

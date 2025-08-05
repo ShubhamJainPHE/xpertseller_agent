@@ -304,7 +304,10 @@ export class SecureSessionManager {
     accessCookie: string
     refreshCookie: string
   } {
-    const cookieOptions = 'HttpOnly; Secure; SameSite=Strict; Path=/'
+    // Use Secure flag only in production (HTTPS)
+    const isProduction = process.env.NODE_ENV === 'production'
+    const secureFlag = isProduction ? 'Secure; ' : ''
+    const cookieOptions = `HttpOnly; ${secureFlag}SameSite=Strict; Path=/`
     
     return {
       accessCookie: `auth_token=${accessToken}; Max-Age=${SESSION_DURATION / 1000}; ${cookieOptions}`,

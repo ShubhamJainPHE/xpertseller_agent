@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react'
 
 export default function SecureLoginPage() {
+  const router = useRouter()
   const [step, setStep] = useState<'email' | 'otp'>('email')
   const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
@@ -149,8 +151,10 @@ export default function SecureLoginPage() {
         // No localStorage storage - using secure HTTP-only cookies
         console.log('🔐 Secure authentication successful')
 
-        // Redirect to dashboard immediately (no delay needed for localStorage)
-        window.location.href = data.redirect || '/home'
+        // Use Next.js router with a small delay to ensure cookies are set
+        setTimeout(() => {
+          router.push(data.redirect || '/home')
+        }, 500)
       } else {
         setError(data.error || 'Invalid OTP code')
         // Clear the OTP inputs on error
