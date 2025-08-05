@@ -78,67 +78,93 @@ Reply STOP to unsubscribe`
   }
 
   /**
-   * Send email notification
+   * Send email notification with Gmail MCP primary + Resend fallback
    */
   private static async sendEmail(email: string, options: NotificationOptions): Promise<void> {
+    const urgencyEmoji = {
+      low: '💡',
+      normal: '📊', 
+      high: '⚠️',
+      critical: '🚨'
+    }[options.urgency || 'normal']
+
+    const subject = `${urgencyEmoji} ${options.title}`
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; }
+          .header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; }
+          .urgency-${options.urgency} { border-left: 4px solid ${this.getUrgencyColor(options.urgency)}; padding-left: 15px; }
+          .button { background: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 10px 0; }
+          .footer { background: #f8f9fa; padding: 15px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${urgencyEmoji} XpertSeller Alert</h1>
+        </div>
+        <div class="content">
+          <div class="urgency-${options.urgency}">
+            <h2>${options.title}</h2>
+            <p>${options.message}</p>
+            
+            ${options.data ? `
+              <h3>Details:</h3>
+              <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px;">${JSON.stringify(options.data, null, 2)}</pre>
+            ` : ''}
+            
+            ${options.link ? `
+              <a href="${options.link}" class="button">View in Dashboard</a>
+            ` : ''}
+          </div>
+        </div>
+        <div class="footer">
+          <p>This is an automated notification from XpertSeller AI Agents.</p>
+          <p>Timestamp: ${new Date().toISOString()}</p>
+        </div>
+      </body>
+      </html>
+    `
+
+    // Track errors from each method
+    let gmailError: unknown = null
+    let resendError: unknown = null
+
+    // 🎯 PRIMARY: Try Gmail MCP via Composio first (FREE & UNLIMITED)
     try {
-      const urgencyEmoji = {
-        low: '💡',
-        normal: '📊', 
-        high: '⚠️',
-        critical: '🚨'
-      }[options.urgency || 'normal']
-
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; }
-            .header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; }
-            .urgency-${options.urgency} { border-left: 4px solid ${this.getUrgencyColor(options.urgency)}; padding-left: 15px; }
-            .button { background: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 10px 0; }
-            .footer { background: #f8f9fa; padding: 15px; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>${urgencyEmoji} XpertSeller Alert</h1>
-          </div>
-          <div class="content">
-            <div class="urgency-${options.urgency}">
-              <h2>${options.title}</h2>
-              <p>${options.message}</p>
-              
-              ${options.data ? `
-                <h3>Details:</h3>
-                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px;">${JSON.stringify(options.data, null, 2)}</pre>
-              ` : ''}
-              
-              ${options.link ? `
-                <a href="${options.link}" class="button">View in Dashboard</a>
-              ` : ''}
-            </div>
-          </div>
-          <div class="footer">
-            <p>This is an automated notification from XpertSeller AI Agents.</p>
-            <p>Timestamp: ${new Date().toISOString()}</p>
-          </div>
-        </body>
-        </html>
-      `
-
-      await unifiedMCPSystem.sendNotification(
-        email,
-        `${urgencyEmoji} ${options.title}`,
-        htmlContent,
-        options.urgency
-      )
-      
-      console.log(`📧 Email sent to ${email}`)
+      console.log('📧 Attempting Gmail MCP (primary method)...')
+      await unifiedMCPSystem.sendNotification(email, subject, htmlContent, options.urgency)
+      console.log(`✅ Email sent via Gmail MCP to ${email}`)
+      return // Success! Exit early
     } catch (error) {
-      console.error('Email failed:', error)
+      gmailError = error
+      console.warn('⚠️ Gmail MCP failed, trying Resend fallback:', error instanceof Error ? error.message : error)
+    }
+
+    // 🛡️ FALLBACK: Use Resend if Gmail MCP fails
+    try {
+      console.log('📧 Attempting Resend (fallback method)...')
+      await this.sendViaResend(email, subject, htmlContent)
+      console.log(`✅ Email sent via Resend fallback to ${email}`)
+    } catch (error) {
+      resendError = error
+      console.error('❌ Both Gmail MCP and Resend failed:', {
+        gmail_error: gmailError instanceof Error ? gmailError.message : gmailError,
+        resend_error: error instanceof Error ? error.message : error,
+        recipient: email,
+        urgency: options.urgency
+      })
+      
+      // Log critical failure to database for monitoring
+      await this.logNotificationFailure({
+        ...options,
+        recipient: email,
+        gmail_error: gmailError instanceof Error ? gmailError.message : String(gmailError),
+        resend_error: error instanceof Error ? error.message : String(error)
+      })
     }
   }
 
@@ -260,6 +286,60 @@ Keep optimizing! 🚀
 
     } catch (error) {
       console.error('Failed to send weekly report:', error)
+    }
+  }
+
+  /**
+   * Send email via Resend (fallback method)
+   */
+  private static async sendViaResend(email: string, subject: string, htmlContent: string): Promise<void> {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('Resend API key not configured')
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL || 'XpertSeller <notifications@xpertseller.com>',
+        to: [email],
+        subject,
+        html: htmlContent
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Resend API failed: ${response.status} ${errorText}`)
+    }
+
+    const result = await response.json()
+    console.log('📧 Resend response:', result.id)
+  }
+
+  /**
+   * Log notification failure for monitoring
+   */
+  private static async logNotificationFailure(failure: any): Promise<void> {
+    try {
+      // Log to Supabase for monitoring and alerting
+      await supabaseAdmin
+        .from('notification_failures')
+        .insert({
+          seller_id: failure.sellerId,
+          recipient: failure.recipient,
+          title: failure.title,
+          urgency: failure.urgency,
+          gmail_error: failure.gmail_error,
+          resend_error: failure.resend_error,
+          failed_at: new Date().toISOString()
+        })
+    } catch (logError) {
+      console.error('Failed to log notification failure:', logError)
+      // Don't throw - logging failure shouldn't break the flow
     }
   }
 
