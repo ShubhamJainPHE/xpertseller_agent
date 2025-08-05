@@ -21,15 +21,18 @@ interface MonitoringMetrics {
 }
 
 export class DataSyncMonitor {
-  private supabase: any
+  private supabase: any = null
   private isMonitoring = false
   private monitorInterval: NodeJS.Timeout | null = null
 
-  constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+  private getSupabaseClient() {
+    if (!this.supabase) {
+      this.supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+    }
+    return this.supabase
   }
 
   async startMonitoring(intervalMinutes = 5) {
@@ -69,7 +72,7 @@ export class DataSyncMonitor {
 
     try {
       // Get seller statistics
-      const { data: sellersData, error: sellersError } = await this.supabase
+      const { data: sellersData, error: sellersError } = await this.getSupabaseClient()
         .from('sellers')
         .select('id, last_sync_at, sync_status, sp_api_credentials')
 
@@ -79,22 +82,22 @@ export class DataSyncMonitor {
       const activeSellers = sellersData.filter((s: any) => s.sp_api_credentials).length
 
       // Get inventory count
-      const { count: inventoryCount } = await this.supabase
+      const { count: inventoryCount } = await this.getSupabaseClient()
         .from('inventory')
         .select('*', { count: 'exact', head: true })
 
       // Get orders count
-      const { count: ordersCount } = await this.supabase
+      const { count: ordersCount } = await this.getSupabaseClient()
         .from('orders')
         .select('*', { count: 'exact', head: true })
 
       // Get products count
-      const { count: productsCount } = await this.supabase
+      const { count: productsCount } = await this.getSupabaseClient()
         .from('products')
         .select('*', { count: 'exact', head: true })
 
       // Check for recent sync errors
-      const { data: errorLogs } = await this.supabase
+      const { data: errorLogs } = await this.getSupabaseClient()
         .from('sync_logs')
         .select('error_message, created_at')
         .eq('status', 'error')
@@ -146,7 +149,7 @@ export class DataSyncMonitor {
       // Get sellers that need syncing (last sync > 1 hour ago or never synced)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
       
-      const { data: sellersToSync, error } = await this.supabase
+      const { data: sellersToSync, error } = await this.getSupabaseClient()
         .from('sellers')
         .select('id, email, last_sync_at')
         .not('sp_api_credentials', 'is', null)
@@ -201,7 +204,7 @@ export class DataSyncMonitor {
 
   async getSyncStatus(sellerId: string): Promise<SyncStatus | null> {
     try {
-      const { data: seller, error } = await this.supabase
+      const { data: seller, error } = await this.getSupabaseClient()
         .from('sellers')
         .select('id, last_sync_at, sync_status')
         .eq('id', sellerId)
@@ -211,13 +214,13 @@ export class DataSyncMonitor {
 
       // Get counts for this seller
       const [inventoryResult, ordersResult, productsResult] = await Promise.all([
-        this.supabase.from('inventory').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId),
-        this.supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId),
-        this.supabase.from('products').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId)
+        this.getSupabaseClient().from('inventory').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId),
+        this.getSupabaseClient().from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId),
+        this.getSupabaseClient().from('products').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId)
       ])
 
       // Get last error if any
-      const { data: lastError } = await this.supabase
+      const { data: lastError } = await this.getSupabaseClient()
         .from('sync_logs')
         .select('error_message')
         .eq('seller_id', sellerId)
@@ -244,7 +247,7 @@ export class DataSyncMonitor {
 
   private async storeHealthMetrics(metrics: MonitoringMetrics) {
     try {
-      const { error } = await this.supabase
+      const { error } = await this.getSupabaseClient()
         .from('system_health_logs')
         .insert({
           total_sellers: metrics.totalSellers,
@@ -267,7 +270,7 @@ export class DataSyncMonitor {
 
   private async logSyncResult(sellerId: string, status: string, result: any) {
     try {
-      const { error } = await this.supabase
+      const { error } = await this.getSupabaseClient()
         .from('sync_logs')
         .insert({
           seller_id: sellerId,
@@ -296,7 +299,7 @@ export class DataSyncMonitor {
       // Get sync history for the last 24 hours
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
       
-      const { data: recentSyncs } = await this.supabase
+      const { data: recentSyncs } = await this.getSupabaseClient()
         .from('sync_logs')
         .select('*')
         .gte('created_at', yesterday)
@@ -304,13 +307,13 @@ export class DataSyncMonitor {
         .limit(20)
 
       // Get all active sellers with their status
-      const { data: sellers } = await this.supabase
+      const { data: sellers } = await this.getSupabaseClient()
         .from('sellers')
         .select('id, email, last_sync_at, sync_status')
         .not('sp_api_credentials', 'is', null)
 
       const sellerStatuses = await Promise.all(
-        sellers?.map(seller => this.getSyncStatus(seller.id)) || []
+        (sellers || []).map((seller: any) => this.getSyncStatus(seller.id))
       ).then(statuses => statuses.filter(Boolean))
 
       return {
