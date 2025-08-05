@@ -1,36 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/auth/supabase-client'
-import type { User } from '@supabase/supabase-js'
+import { useSecureAuth } from '@/lib/hooks/useSecureAuth'
 
 export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const supabase = createClient()
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      setLoading(false)
-      
-      if (!user) {
-        router.push('/auth/login')
-      }
-    }
-
-    getUser()
-  }, [router, supabase.auth])
+  const { isLoading, isAuthenticated, seller, logout } = useSecureAuth()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth/login')
+    await logout()
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -38,8 +17,8 @@ export default function HomePage() {
     )
   }
 
-  if (!user) {
-    return null // Will redirect to login
+  if (!isAuthenticated || !seller) {
+    return null // useSecureAuth handles redirect
   }
 
   return (
@@ -54,7 +33,7 @@ export default function HomePage() {
                   Welcome to XpertSeller
                 </h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  Logged in as: {user.email}
+                  Logged in as: {seller.email}
                 </p>
               </div>
               <button
