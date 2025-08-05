@@ -134,7 +134,7 @@ async function getApiToken(
         code: code || '',
         client_id: process.env.AMAZON_CLIENT_ID || '',
         client_secret: process.env.AMAZON_CLIENT_SECRET || '',
-        redirect_uri: process.env.AMAZON_REDIRECT_URI || '',
+        redirect_uri: process.env.AMAZON_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/amazon/callback`,
       }).toString()
 
   try {
