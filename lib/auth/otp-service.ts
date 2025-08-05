@@ -218,7 +218,7 @@ Need help? Contact support@xpertseller.com
   /**
    * Verify OTP code
    */
-  static async verifyOTP(email: string, otpCode: string): Promise<{ success: boolean; message: string; sellerId?: string }> {
+  static async verifyOTP(email: string, otpCode: string): Promise<{ success: boolean; message: string; sellerId?: string | null }> {
     try {
 
       // Find the OTP record
@@ -279,42 +279,14 @@ Need help? Contact support@xpertseller.com
         .single()
 
       if (sellerError && sellerError.code === 'PGRST116') {
-        // Seller doesn't exist, create new one with complete profile
-        console.log(`🆕 Auto-creating seller account for ${email}`);
+        // Seller doesn't exist, skip account creation for now
+        console.log(`⚠️ Seller account not found for ${email}, allowing login without account creation`);
         
-        const { data: newSeller, error: createError } = await supabase
-          .from('sellers')
-          .insert({
-            email,
-            amazon_seller_id: `temp_${Date.now()}`,
-            marketplace_ids: ['ATVPDKIKX0DER'], // Default to US marketplace
-            sp_api_credentials: {
-              clientId: '',
-              clientSecret: '',
-              refreshToken: ''
-            },
-            business_context: {
-              email,
-              name: email.split('@')[0], // Use email prefix as temp name
-              businessName: 'My Business', // Default business name
-              geography: 'United States',
-              phoneNumber: '',
-              isAutoCreated: true
-            },
-            status: 'trial',
-            onboarding_completed: false,
-            email_verified: true
-          })
-          .select('id, email')
-          .single()
-
-        if (createError) {
-          console.error('Error creating seller:', createError)
-          return { success: false, message: 'Failed to create account. Please try again.' }
+        return {
+          success: true,
+          message: 'Login successful!',
+          sellerId: null // No seller ID for new users
         }
-
-        seller = newSeller
-        console.log(`✅ Auto-created seller: ${seller.id}`)
       } else if (sellerError) {
         console.error('Error fetching seller:', sellerError)
         return { success: false, message: 'Account lookup failed. Please try again.' }

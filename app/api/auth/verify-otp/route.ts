@@ -62,11 +62,18 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     console.log(`✅ OTP verified for ${email}, sellerId: ${sellerId}`)
     
     if (!sellerId) {
-      console.log(`❌ No sellerId found for ${email}`)
-      return NextResponse.json(
-        { error: 'Authentication failed. Please try again.' },
-        { status: 400 }
-      )
+      console.log(`⚠️ No sellerId for ${email}, allowing basic login without session`)
+      return NextResponse.json({
+        success: true,
+        message: 'Login successful! Account setup needed.',
+        seller: {
+          id: null,
+          email: email.toLowerCase(),
+          verified: true,
+          needsSetup: true
+        },
+        redirect: '/auth/onboarding'
+      })
     }
 
     // Create secure session using SecureSessionManager
