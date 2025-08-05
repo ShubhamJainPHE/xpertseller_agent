@@ -16,6 +16,7 @@ const publicPaths = [
   '/auth',
   '/api/auth',
   '/api/sellers', // Allow user registration
+  '/api/debug', // Allow debug endpoints
   '/admin'
 ]
 
