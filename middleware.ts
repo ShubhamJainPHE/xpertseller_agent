@@ -17,6 +17,8 @@ const publicPaths = [
   '/api/auth',
   '/api/sellers', // Allow user registration
   '/api/debug', // Allow debug endpoints
+  '/api/admin', // Allow admin endpoints
+  '/api/amazon', // Allow Amazon sync endpoints
   '/admin'
 ]
 
