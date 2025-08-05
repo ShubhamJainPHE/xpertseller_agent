@@ -1,50 +1,43 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { MiddlewareAuth } from '@/lib/auth/middleware-auth'
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
-
-  const supabase = createServerClient(
-    'https://uvfjofawxsmrdpaxxptg.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2ZmpvZmF3eHNtcmRwYXh4cHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3OTY4MzMsImV4cCI6MjA2OTM3MjgzM30.pqI7rXBvyElK4cqBqGwOeKcbTtFZF-r4CvOyBfGCbBQ',
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
-  // Skip middleware for static files
+  // Skip middleware for static files and API routes
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
+    pathname.startsWith('/api') ||
     pathname.includes('.') ||
     pathname === '/favicon.ico'
   ) {
-    return supabaseResponse
+    return NextResponse.next()
+  }
+
+  // Check for authentication using our custom JWT system
+  const authToken = request.cookies.get('auth_token')?.value
+  let isAuthenticated = false
+  let sessionData = null
+
+  console.log(`🔍 Middleware checking auth for ${pathname}, token present: ${!!authToken}`)
+
+  if (authToken) {
+    try {
+      console.log(`🔑 Validating JWT token for ${pathname}`)
+      const validation = await MiddlewareAuth.validateToken(authToken)
+      isAuthenticated = validation.valid
+      sessionData = validation.payload
+      console.log(`✅ Token validation result: ${validation.valid}, payload: ${!!sessionData}`)
+      if (!validation.valid && validation.error) {
+        console.log(`❌ Validation error: ${validation.error}`)
+      }
+    } catch (error) {
+      console.error('❌ Middleware auth validation error:', error)
+      isAuthenticated = false
+    }
+  } else {
+    console.log(`⚠️ No auth token found for ${pathname}`)
   }
 
   // Protected routes
@@ -52,24 +45,26 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
 
   // Redirect unauthenticated users from protected routes
-  if (isProtectedPath && !user) {
+  if (isProtectedPath && !isAuthenticated) {
+    console.log(`🔒 Redirecting unauthenticated user from ${pathname} to /auth/login`)
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
   // Redirect authenticated users from login page
-  if (pathname === '/auth/login' && user) {
+  if (pathname === '/auth/login' && isAuthenticated) {
+    console.log(`🔄 Redirecting authenticated user from login to /home`)
     return NextResponse.redirect(new URL('/home', request.url))
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object instead of the supabaseResponse object
+  // Add user data to request headers for server components
+  const response = NextResponse.next()
+  if (isAuthenticated && sessionData) {
+    response.headers.set('x-user-id', sessionData.sellerId)
+    response.headers.set('x-user-email', sessionData.email)
+    response.headers.set('x-session-id', sessionData.sessionId)
+  }
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
