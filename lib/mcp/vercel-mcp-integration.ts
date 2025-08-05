@@ -95,9 +95,10 @@ export class VercelMCPIntegration {
         error: data.error?.message
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Vercel API call failed'
       return {
         readyState: 'ERROR',
-        error: error.message
+        error: errorMessage
       }
     }
   }
@@ -263,9 +264,10 @@ export class VercelMCPIntegration {
         logs
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message
+        error: errorMessage
       }
     }
   }
@@ -288,7 +290,8 @@ export class VercelMCPIntegration {
       try {
         latestDeployment = (await this.getLatestDeployment()) || undefined
       } catch (error) {
-        errors.push(`Failed to get latest deployment: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        errors.push(`Failed to get latest deployment: ${errorMessage}`)
       }
       
       return {
@@ -298,10 +301,11 @@ export class VercelMCPIntegration {
         errors
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Health check failed'
       return {
         healthy: false,
         projects: 0,
-        errors: [error.message]
+        errors: [errorMessage]
       }
     }
   }
@@ -343,7 +347,8 @@ export class VercelMCPIntegration {
           errors.push(`Failed to update ${key}`)
         }
       } catch (error) {
-        errors.push(`Error updating ${key}: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Update failed'
+        errors.push(`Error updating ${key}: ${errorMessage}`)
       }
     }
     

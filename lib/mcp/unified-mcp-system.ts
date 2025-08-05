@@ -74,7 +74,8 @@ export class UnifiedMCPSystem {
         throw new Error('Composio toolset not initialized')
       }
     } catch (error) {
-      throw new Error(`Composio connection failed: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Composio connection failed'
+      throw new Error(`Composio connection failed: ${errorMessage}`)
     }
   }
 
@@ -102,9 +103,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -129,9 +131,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -153,9 +156,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -180,9 +184,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -201,9 +206,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -226,9 +232,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -274,15 +281,16 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Sync failed'
       // Mark sync as failed
       await directSupabase.updateSyncStatus(tableName, 'failed', {
-        error: error.message,
+        error: errorMessage,
         failed_at: new Date().toISOString()
       })
       
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -321,9 +329,10 @@ export class UnifiedMCPSystem {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }
@@ -364,7 +373,7 @@ export class UnifiedMCPSystem {
         },
         table_count: 0,
         deployment_status: 'ERROR',
-        errors: [error.message]
+        errors: [error instanceof Error ? error.message : 'System health check failed']
       }
     }
   }
@@ -411,9 +420,10 @@ export class UnifiedMCPSystem {
       
       return result
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Operation failed'
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       }
     }

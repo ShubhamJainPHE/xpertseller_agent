@@ -186,16 +186,18 @@ export class PredictiveAgent {
    */
   private static async predictSeasonalChanges(sellerId: string): Promise<PredictionModel[]> {
     try {
-      // Get Google Trends data for product categories
-      const { data: products } = await supabaseAdmin
-        .from('products')
-        .select('category, subcategory, velocity_30d, current_price')
-        .eq('seller_id', sellerId)
-        .eq('is_active', true)
+      // Use Unified MCP System for seasonal data
+      const productsResult = await unifiedMCPSystem.queryDatabase('get_products', {
+        seller_id: sellerId,
+        where: 'is_active = true',
+        columns: 'category, subcategory, velocity_30d, current_price',
+        limit: 100
+      })
 
-      if (!products) return []
+      if (!productsResult.success || !productsResult.data.results) return []
+      const products = productsResult.data.results
 
-      const categories = [...new Set(products.map(p => p.category))]
+      const categories = [...new Set(products.map((p: any) => p.category))]
       const predictions: PredictionModel[] = []
 
       for (const category of categories) {
@@ -205,10 +207,10 @@ export class PredictiveAgent {
             model: 'gpt-4',
             messages: [{
               role: 'system',
-              content: `You are a seasonal trend analyst. Analyze the category "${sanitizeForAI(category)}" for the next 30 days considering current month is ${new Date().toLocaleString('default', { month: 'long' })}.`
+              content: `You are a seasonal trend analyst. Analyze the category "${sanitizeForAI(String(category))}" for the next 30 days considering current month is ${new Date().toLocaleString('default', { month: 'long' })}.`
             }, {
               role: 'user', 
-              content: `What seasonal changes should I expect for "${sanitizeForAI(category)}" products in the next 30 days? Consider:
+              content: `What seasonal changes should I expect for "${sanitizeForAI(String(category))}" products in the next 30 days? Consider:
               1. Upcoming holidays/events
               2. Weather changes
               3. Shopping patterns
@@ -222,8 +224,8 @@ export class PredictiveAgent {
         const analysis = JSON.parse(seasonalAnalysis.choices[0]?.message?.content || '{}')
         
         if (analysis.confidence > 0.6) {
-          const categoryProducts = products.filter(p => p.category === category)
-          const totalRevenue = categoryProducts.reduce((sum, p) => sum + (p.velocity_30d * p.current_price), 0)
+          const categoryProducts = products.filter((p: any) => p.category === category)
+          const totalRevenue = categoryProducts.reduce((sum: number, p: any) => sum + (p.velocity_30d * p.current_price), 0)
           const impact = totalRevenue * (analysis.impact_percentage / 100)
 
           predictions.push({
@@ -255,13 +257,17 @@ export class PredictiveAgent {
     // This would integrate with competitor monitoring tools
     // For now, we'll use price history patterns
     
-    const { data: products } = await supabaseAdmin
-      .from('products')
-      .select('*')
-      .eq('seller_id', sellerId)
-      .eq('is_active', true)
-      .order('velocity_30d', { ascending: false })
-      .limit(20) // Focus on top products
+    // Use Unified MCP System for pricing data
+    const productsResult = await unifiedMCPSystem.queryDatabase('get_products', {
+      seller_id: sellerId,
+      where: 'is_active = true',
+      columns: '*',
+      order: 'velocity_30d DESC',
+      limit: 20
+    })
+    
+    if (!productsResult.success || !productsResult.data.results) return []
+    const products = productsResult.data.results
 
     if (!products) return []
 
@@ -363,25 +369,24 @@ The AI is continuously monitoring and will alert you when action is needed.
     predictions: PredictionModel[]
   ): Promise<void> {
     for (const prediction of predictions) {
-      await supabaseAdmin
-        .from('fact_stream')
-        .insert({
-          seller_id: sellerId,
-          event_type: 'prediction.generated',
-          event_category: 'intelligence',
-          data: {
-            prediction_type: prediction.type,
-            confidence: prediction.confidence,
-            timeline: prediction.timeline,
-            predicted_impact: prediction.impact,
-            preventive_actions: prediction.preventive_actions,
-            created_at: new Date().toISOString()
-          },
-          importance_score: Math.ceil(prediction.confidence * 10),
-          requires_action: prediction.confidence > 0.8,
-          processing_status: 'completed',
-          processed_by: ['predictive_agent']
-        })
+      // Use Unified MCP System to store predictions
+      await unifiedMCPSystem.queryDatabase('insert_fact_stream', {
+        seller_id: sellerId,
+        event_type: 'prediction.generated',
+        event_category: 'intelligence',
+        data: {
+          prediction_type: prediction.type,
+          confidence: prediction.confidence,
+          timeline: prediction.timeline,
+          predicted_impact: prediction.impact,
+          preventive_actions: prediction.preventive_actions,
+          created_at: new Date().toISOString()
+        },
+        importance_score: Math.ceil(prediction.confidence * 10),
+        requires_action: prediction.confidence > 0.8,
+        processing_status: 'completed',
+        processed_by: ['predictive_agent']
+      })
     }
   }
 

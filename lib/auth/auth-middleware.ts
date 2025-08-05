@@ -1,18 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SecureSessionManager } from './secure-session'
-import rateLimit from 'express-rate-limit'
-
-// Rate limiting configuration
-const authRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 requests per windowMs
-  message: {
-    error: 'Too many authentication attempts, please try again later',
-    retryAfter: 15 * 60
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-})
 
 interface AuthenticatedRequest extends NextRequest {
   user?: {

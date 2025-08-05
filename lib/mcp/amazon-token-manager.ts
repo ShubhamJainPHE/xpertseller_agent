@@ -93,7 +93,8 @@ export class AmazonTokenManager {
       console.error(`❌ Failed to get valid access token for seller ${sellerId}:`, error)
       
       // Send notification about token issue
-      await this.notifyTokenIssue(sellerId, error.message)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      await this.notifyTokenIssue(sellerId, errorMessage)
       
       return null
     }
@@ -127,7 +128,8 @@ export class AmazonTokenManager {
       return { valid: false, needs_refresh: true, error: `Validation failed: ${response.statusText}` }
 
     } catch (error) {
-      return { valid: false, needs_refresh: true, error: error.message }
+      const errorMessage = error instanceof Error ? error.message : 'Token validation failed'
+      return { valid: false, needs_refresh: true, error: errorMessage }
     }
   }
 
@@ -172,7 +174,8 @@ export class AmazonTokenManager {
       }
 
     } catch (error) {
-      return { success: false, error: error.message }
+      const errorMessage = error instanceof Error ? error.message : 'Token refresh failed'
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -315,7 +318,8 @@ This is usually temporary and resolves automatically.
           }
         } catch (error) {
           failedCount++
-          errors.push(`Error refreshing ${seller.email}: ${error.message}`)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          errors.push(`Error refreshing ${seller.email}: ${errorMessage}`)
         }
 
         // Small delay to avoid rate limits
@@ -328,7 +332,8 @@ This is usually temporary and resolves automatically.
 
     } catch (error) {
       console.error('❌ Bulk token refresh failed:', error)
-      return { success: 0, failed: 0, errors: [error.message] }
+      const errorMessage = error instanceof Error ? error.message : 'Bulk refresh failed'
+      return { success: 0, failed: 0, errors: [errorMessage] }
     }
   }
 
@@ -364,7 +369,8 @@ This is usually temporary and resolves automatically.
       }
 
     } catch (error) {
-      return { healthy: false, needs_refresh: true, error: error.message }
+      const errorMessage = error instanceof Error ? error.message : 'Health check failed'
+      return { healthy: false, needs_refresh: true, error: errorMessage }
     }
   }
 }

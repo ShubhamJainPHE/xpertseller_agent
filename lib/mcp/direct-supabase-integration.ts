@@ -241,11 +241,12 @@ export class DirectSupabaseIntegration {
       }
     } catch (error) {
       console.error(`Error querying table ${tableName}:`, error)
+      const errorMessage = error instanceof Error ? error.message : 'Query failed'
       return {
         table: tableName,
         rows: [],
         count: 0,
-        error: error.message
+        error: errorMessage
       }
     }
   }
@@ -269,7 +270,8 @@ export class DirectSupabaseIntegration {
       }
     } catch (error) {
       console.error(`Error getting schema for ${tableName}:`, error)
-      return { table_name: tableName, columns: [], error: error.message }
+      const errorMessage = error instanceof Error ? error.message : 'Schema fetch failed'
+      return { table_name: tableName, columns: [], error: errorMessage }
     }
   }
 
@@ -390,7 +392,8 @@ export class DirectSupabaseIntegration {
           }
         })
       } catch (error) {
-        errors.push(`Composio connection issue: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Composio connection failed'
+        errors.push(`Composio connection issue: ${errorMessage}`)
       }
 
       return {
@@ -399,10 +402,11 @@ export class DirectSupabaseIntegration {
         errors
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Health check failed'
       return {
         healthy: false,
         table_count: 0,
-        errors: [error.message]
+        errors: [errorMessage]
       }
     }
   }

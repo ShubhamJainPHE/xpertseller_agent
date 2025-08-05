@@ -160,40 +160,5 @@ export function useSecureAuth() {
   }
 }
 
-// HOC for protecting pages
-export function withSecureAuth<P extends object>(
-  WrappedComponent: React.ComponentType<P>
-) {
-  return function AuthenticatedComponent(props: P) {
-    const { isAuthenticated, isLoading, requireAuth } = useSecureAuth()
-
-    useEffect(() => {
-      if (!isLoading) {
-        requireAuth()
-      }
-    }, [isAuthenticated, isLoading, requireAuth])
-
-    if (isLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Validating session...</p>
-          </div>
-        </div>
-      )
-    }
-
-    if (!isAuthenticated) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-600">Redirecting to login...</p>
-          </div>
-        </div>
-      )
-    }
-
-    return <WrappedComponent {...props} />
-  }
-}
+// Export types for external usage
+export type { SellerInfo, AuthState }

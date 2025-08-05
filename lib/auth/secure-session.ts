@@ -1,9 +1,11 @@
-import jwt from 'jsonwebtoken'
+import { SignJWT, jwtVerify } from 'jose'
 import { supabaseAdmin } from '../database/connection'
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
 
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex')
+// Use a fallback secret that works in edge runtime
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-super-secret-jwt-key-that-should-be-set-in-production-env-vars'
+)
 const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 const REFRESH_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days
 
@@ -16,7 +18,7 @@ interface SessionData {
   userAgent?: string
 }
 
-interface JWTPayload extends SessionData {
+interface CustomJWTPayload extends SessionData {
   iat: number
   exp: number
   type: 'access' | 'refresh'
@@ -38,7 +40,12 @@ export class SecureSessionManager {
     sessionId: string
     expiresAt: number
   }> {
-    const sessionId = crypto.randomUUID()
+    // Generate UUID compatible with edge runtime
+    const sessionId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0
+      const v = c == 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
     const now = Date.now()
     const expiresAt = now + SESSION_DURATION
 
@@ -55,18 +62,18 @@ export class SecureSessionManager {
     this.activeSessions.set(sessionId, sessionData)
     await this.storeSessionInDB(sessionData)
 
-    // Create JWT tokens
-    const accessToken = jwt.sign(
-      { ...sessionData, type: 'access' },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    )
+    // Create JWT tokens using jose
+    const accessToken = await new SignJWT({ ...sessionData, type: 'access' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('24h')
+      .sign(JWT_SECRET)
 
-    const refreshToken = jwt.sign(
-      { ...sessionData, type: 'refresh' },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const refreshToken = await new SignJWT({ ...sessionData, type: 'refresh' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(JWT_SECRET)
 
     // Update seller's last login
     await supabaseAdmin
@@ -94,8 +101,9 @@ export class SecureSessionManager {
     error?: string
   }> {
     try {
-      // Verify JWT token
-      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
+      // Verify JWT token using jose
+      const { payload } = await jwtVerify(token, JWT_SECRET)
+      const decoded = payload as unknown as CustomJWTPayload
 
       if (decoded.type !== 'access') {
         return { valid: false, error: 'Invalid token type' }
@@ -113,9 +121,10 @@ export class SecureSessionManager {
         return { valid: true, sessionData: dbSession }
       }
 
-      // Validate session hasn't expired
-      if (Date.now() > decoded.exp * 1000) {
-        await this.invalidateSession(decoded.sessionId)
+      // Validate session hasn't expired (jose handles this automatically)
+      // Additional check for our session data
+      if (decoded.exp && Date.now() > decoded.exp * 1000) {
+        await this.invalidateSession(decoded.sessionId as string)
         return { valid: false, error: 'Session expired' }
       }
 
@@ -127,18 +136,20 @@ export class SecureSessionManager {
         .single()
 
       if (!seller || seller.status === 'suspended') {
-        await this.invalidateSession(decoded.sessionId)
+        await this.invalidateSession(decoded.sessionId as string)
         return { valid: false, error: 'Account suspended or not found' }
       }
 
       return { valid: true, sessionData }
 
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        return { valid: false, error: 'Token expired' }
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        return { valid: false, error: 'Invalid token' }
+      if (error instanceof Error) {
+        if (error.message.includes('expired')) {
+          return { valid: false, error: 'Token expired' }
+        }
+        if (error.message.includes('invalid')) {
+          return { valid: false, error: 'Invalid token' }
+        }
       }
       return { valid: false, error: 'Session validation failed' }
     }
@@ -153,24 +164,28 @@ export class SecureSessionManager {
     error?: string
   }> {
     try {
-      const decoded = jwt.verify(refreshToken, JWT_SECRET) as JWTPayload
+      const { payload } = await jwtVerify(refreshToken, JWT_SECRET)
+      const decoded = payload as unknown as CustomJWTPayload
 
       if (decoded.type !== 'refresh') {
         return { success: false, error: 'Invalid refresh token' }
       }
 
-      // Check if session is still valid
-      const validation = await this.validateSession(refreshToken)
-      if (!validation.valid || !validation.sessionData) {
-        return { success: false, error: 'Session invalid' }
+      // Get session data from memory or database
+      const sessionData = this.activeSessions.get(decoded.sessionId as string)
+      if (!sessionData) {
+        const dbSession = await this.getSessionFromDB(decoded.sessionId as string)
+        if (!dbSession) {
+          return { success: false, error: 'Session not found' }
+        }
       }
 
       // Create new access token
-      const newAccessToken = jwt.sign(
-        { ...validation.sessionData, type: 'access' },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      )
+      const newAccessToken = await new SignJWT({ ...sessionData, type: 'access' })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(JWT_SECRET)
 
       return { success: true, accessToken: newAccessToken }
 
