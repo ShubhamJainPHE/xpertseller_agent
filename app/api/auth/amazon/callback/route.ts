@@ -116,6 +116,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Store debug data globally for debugging endpoint access
+let debugData: any = null
+
 async function getApiToken(
   refreshToken: string | null = null,
   code: string | null = null
@@ -126,6 +129,7 @@ async function getApiToken(
   console.log('CLIENT_ID exists:', !!process.env.AMAZON_CLIENT_ID)
   console.log('CLIENT_SECRET exists:', !!process.env.AMAZON_CLIENT_SECRET)
   console.log('REDIRECT_URI:', process.env.AMAZON_REDIRECT_URI || 'using fallback')
+  console.log('CODE received:', code ? `${code.substring(0, 10)}...` : 'null')
   
   const data = refreshToken
     ? new URLSearchParams({
@@ -142,6 +146,20 @@ async function getApiToken(
         redirect_uri: process.env.AMAZON_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/amazon/callback`,
       }).toString()
 
+  // Store debug info before making the request
+  debugData = {
+    timestamp: new Date().toISOString(),
+    requestUrl: url,
+    requestBody: data,
+    codeReceived: code ? `${code.substring(0, 10)}...` : 'null',
+    fullCodeLength: code?.length || 0,
+    envCheck: {
+      hasClientId: !!process.env.AMAZON_CLIENT_ID,
+      hasClientSecret: !!process.env.AMAZON_CLIENT_SECRET,
+      redirectUri: process.env.AMAZON_REDIRECT_URI || 'using fallback'
+    }
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -151,18 +169,39 @@ async function getApiToken(
       body: data
     })
 
+    const responseText = await response.text()
+    
     if (!response.ok) {
-      const errorData = await response.text()
-      console.error(`Token request failed: ${response.status} ${response.statusText}`, errorData)
+      // Store failed response in debug data
+      debugData.response = {
+        status: response.status,
+        statusText: response.statusText,
+        body: responseText
+      }
+      
+      console.error(`Token request failed: ${response.status} ${response.statusText}`, responseText)
+      
+      // Try to parse error response
+      try {
+        const errorJson = JSON.parse(responseText)
+        debugData.parsedError = errorJson
+      } catch {
+        debugData.rawError = responseText
+      }
+      
       throw new Error(`Token request failed: ${response.statusText}`)
     }
 
-    const tokenData = await response.json()
+    const tokenData = JSON.parse(responseText)
+    debugData.success = true
+    debugData.response = { status: 200, body: 'Success (tokens received)' }
+    
     return {
       accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token || refreshToken, // Keep existing refresh token if not returned
+      refreshToken: tokenData.refresh_token || refreshToken,
     }
   } catch (err: any) {
+    debugData.error = err.message
     console.error('❌ Token exchange failed:')
     console.error('Request URL:', url)
     console.error('Request body:', data)
@@ -170,3 +209,6 @@ async function getApiToken(
     throw err
   }
 }
+
+// Export debug data for the debug endpoint
+export { debugData }

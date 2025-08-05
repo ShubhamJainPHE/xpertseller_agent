@@ -5,11 +5,31 @@ let lastError: any = null
 let lastRequest: any = null
 
 export async function GET(request: NextRequest) {
-  return NextResponse.json({
-    lastError,
-    lastRequest,
-    timestamp: new Date().toISOString()
-  })
+  try {
+    // Try to get real OAuth debug data from callback
+    const { debugData } = await import('../../auth/amazon/callback/route')
+    
+    return NextResponse.json({
+      realOAuthData: debugData,
+      testData: {
+        lastError,
+        lastRequest
+      },
+      timestamp: new Date().toISOString(),
+      source: debugData ? 'real_oauth_attempt' : 'test_data_only'
+    })
+  } catch (importError) {
+    return NextResponse.json({
+      realOAuthData: null,
+      testData: {
+        lastError,
+        lastRequest
+      },
+      timestamp: new Date().toISOString(),
+      source: 'test_data_only',
+      importError: importError instanceof Error ? importError.message : 'Unknown import error'
+    })
+  }
 }
 
 export async function POST(request: NextRequest) {
