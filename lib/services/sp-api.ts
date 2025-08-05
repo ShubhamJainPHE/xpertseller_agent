@@ -281,7 +281,7 @@ export async function createSPApiService(sellerId: string): Promise<SPApiService
     // Get seller credentials from database
     const { data: seller } = await supabaseAdmin
       .from('sellers')
-      .select('sp_api_credentials, amazon_seller_id, marketplace_ids')
+      .select('sp_api_credentials, amazon_seller_id')
       .eq('id', sellerId)
       .single()
 
@@ -295,7 +295,7 @@ export async function createSPApiService(sellerId: string): Promise<SPApiService
       clientSecret: credentials.clientSecret,
       refreshToken: credentials.refreshToken,
       sellerId: seller.amazon_seller_id,
-      marketplaceId: seller.marketplace_ids[0] || 'ATVPDKIKX0DER'
+      marketplaceId: 'ATVPDKIKX0DER' // US marketplace
     }
 
     return new SPApiService(spApiCredentials)

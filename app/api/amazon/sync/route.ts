@@ -84,9 +84,14 @@ export async function GET(request: NextRequest) {
       }
     } catch (error) {
       console.error('Inventory sync failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const isPermissionError = errorMessage.includes('403') || errorMessage.includes('Forbidden')
+      
       results.syncResults.inventory = {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage,
+        permissionIssue: isPermissionError,
+        suggestion: isPermissionError ? 'This seller may not have FBA inventory access permissions. Check Amazon Seller Central permissions.' : 'Check SP-API configuration and network connectivity.'
       }
     }
 
@@ -130,9 +135,14 @@ export async function GET(request: NextRequest) {
       }
     } catch (error) {
       console.error('Orders sync failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const isPermissionError = errorMessage.includes('403') || errorMessage.includes('Forbidden')
+      
       results.syncResults.orders = {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage,
+        permissionIssue: isPermissionError,
+        suggestion: isPermissionError ? 'This seller may not have Orders API access permissions. Check Amazon Seller Central permissions or try using a different marketplace.' : 'Check SP-API configuration and network connectivity.'
       }
     }
 
