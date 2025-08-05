@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../database/connection'
 import { Database } from '../database/types'
-// Disable Composio during build to prevent DataCloneError
-let ComposioToolSet: any = null
+// Enable Composio for notifications and actions
+import { ComposioToolSet } from 'composio-core'
 import { OpenAI } from 'openai'
 import { createSPApiService } from '../services/sp-api'
 import { NotificationService } from '../utils/notifications'
@@ -13,9 +13,9 @@ export class RevenueOptimizationAgent {
     apiKey: process.env.OPENAI_API_KEY
   })
   
-  private static toolset = ComposioToolSet ? new ComposioToolSet({
-    apiKey: process.env.COMPOSIO_API_KEY
-  }) : null
+  private static toolset = new ComposioToolSet({
+    apiKey: process.env.COMPOSIO_API_KEY || 'ak_m7G25pTBup6hdv2Mjn_v'
+  })
   
   /**
    * AI-powered revenue optimization with autonomous actions

@@ -1,15 +1,15 @@
 import { supabaseAdmin } from '../database/connection'
 import { OpenAI } from 'openai'
 // Disable Composio during build to prevent DataCloneError
-let ComposioToolSet: any = null
+import { ComposioToolSet } from 'composio-core'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-const toolset = ComposioToolSet ? new ComposioToolSet({
-  apiKey: process.env.COMPOSIO_API_KEY
-}) : null
+const toolset = new ComposioToolSet({
+  apiKey: process.env.COMPOSIO_API_KEY || 'ak_m7G25pTBup6hdv2Mjn_v'
+})
 
 interface SmartNotificationOptions {
   sellerId: string

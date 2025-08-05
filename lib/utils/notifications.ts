@@ -1,10 +1,10 @@
-// Disable Composio during build to prevent DataCloneError
-let ComposioToolSet: any = null
+// Enable Composio for Gmail notifications
+import { ComposioToolSet } from 'composio-core'
 import { supabaseAdmin } from '../database/connection'
 
-const toolset = ComposioToolSet ? new ComposioToolSet({
-  apiKey: process.env.COMPOSIO_API_KEY
-}) : null
+const toolset = new ComposioToolSet({
+  apiKey: process.env.COMPOSIO_API_KEY || 'ak_m7G25pTBup6hdv2Mjn_v'
+})
 
 interface NotificationOptions {
   sellerId: string
@@ -136,9 +136,10 @@ Reply STOP to unsubscribe`
       await toolset.executeAction({
         action: 'gmail_send_email', 
         params: {
-          to: email,
+          recipient_email: email,
           subject: `${urgencyEmoji} ${options.title}`,
-          html: htmlContent
+          body: htmlContent,
+          is_html: true
         }
       })
       
