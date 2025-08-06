@@ -166,9 +166,30 @@ export default function HomePage() {
                 </div>
                 
                 <button
-                  onClick={() => {
-                    // TODO: Implement Amazon OAuth flow
-                    alert('Amazon OAuth flow will be implemented next. This will redirect you to Amazon Seller Central to authorize XpertSeller.')
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/auth/amazon/connect', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                      });
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.authUrl) {
+                          // Redirect to Amazon OAuth
+                          window.location.href = data.authUrl;
+                        } else {
+                          alert('Failed to initiate Amazon connection');
+                        }
+                      } else {
+                        alert('Error connecting to Amazon');
+                      }
+                    } catch (error) {
+                      console.error('OAuth error:', error);
+                      alert('Connection failed. Please try again.');
+                    }
                   }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-lg text-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
