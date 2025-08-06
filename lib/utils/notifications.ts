@@ -124,7 +124,7 @@ Reply STOP to unsubscribe`
     `
 
     // Track errors from each method
-    let gmailError: unknown = null
+    const gmailError: unknown = null
     let resendError: unknown = null
 
     // Note: MCP Gmail removed - using Resend directly
