@@ -270,7 +270,14 @@ export class DashboardCalculations {
         throw new Error('Seller not found')
       }
 
-      const isConnected = seller.sp_api_credentials && seller.amazon_seller_id
+      // Check if Amazon connection is valid (not just present)
+      const isConnected = seller.sp_api_credentials && 
+        seller.amazon_seller_id && 
+        seller.amazon_seller_id !== 'PENDING_AUTH' &&
+        seller.amazon_seller_id !== '' &&
+        seller.sp_api_credentials.refreshToken &&
+        seller.sp_api_credentials.clientId &&
+        seller.sp_api_credentials.clientSecret
 
       if (!isConnected) {
         // Return empty state for unconnected accounts

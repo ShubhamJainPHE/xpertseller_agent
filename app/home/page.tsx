@@ -121,30 +121,92 @@ export default function HomePage() {
 
         {/* Content */}
         <div className="mt-8">
-          {/* Welcome Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Welcome back! 👋
-              </h3>
-              <div className="mt-2 max-w-xl text-sm text-gray-500">
-                <p>
-                  Here's your Amazon seller performance overview. Connect your store to see real-time insights and AI-powered recommendations.
+          {/* Amazon Connection Check */}
+          {metrics && !metrics.connected && !metricsLoading ? (
+            /* Show Amazon Connection Screen */
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-8 mb-8">
+              <div className="text-center">
+                <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                  <span className="text-4xl">🔗</span>
+                </div>
+                
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  Connect Your Amazon Seller Account
+                </h2>
+                
+                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                  To see your real-time sales data, inventory insights, and AI-powered recommendations, 
+                  please connect your Amazon Seller Central account securely.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🔒</span>
+                    </div>
+                    <h3 className="font-medium text-gray-900 mb-2">Secure OAuth</h3>
+                    <p className="text-sm text-gray-600">Bank-level security with Amazon's official API</p>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">📊</span>
+                    </div>
+                    <h3 className="font-medium text-gray-900 mb-2">Real-time Data</h3>
+                    <p className="text-sm text-gray-600">Live sales, inventory, and performance metrics</p>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🤖</span>
+                    </div>
+                    <h3 className="font-medium text-gray-900 mb-2">AI Insights</h3>
+                    <p className="text-sm text-gray-600">Intelligent recommendations to boost profits</p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    // TODO: Implement Amazon OAuth flow
+                    alert('Amazon OAuth flow will be implemented next. This will redirect you to Amazon Seller Central to authorize XpertSeller.')
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-lg text-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  🚀 Connect Amazon Account
+                </button>
+                
+                <p className="text-xs text-gray-500 mt-4 max-w-md mx-auto">
+                  We'll redirect you to Amazon Seller Central where you can securely authorize XpertSeller. 
+                  We only request read-only access to your sales data.
                 </p>
               </div>
-              <div className="mt-4 flex items-center space-x-3">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  ⚡ AI-Powered
-                </span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  🔒 Secure
-                </span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  📊 Real-time
-                </span>
+            </div>
+          ) : (
+            /* Show Welcome Card for Connected Users */
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Welcome back! 👋
+                </h3>
+                <div className="mt-2 max-w-xl text-sm text-gray-500">
+                  <p>
+                    Here's your Amazon seller performance overview. Your store is connected and data is syncing automatically.
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center space-x-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    ⚡ AI-Powered
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    🔒 Secure
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    📊 Real-time
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Error State */}
           {metricsError && (
