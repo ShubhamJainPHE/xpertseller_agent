@@ -38,32 +38,39 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      // Get current authenticated seller from session
-      const sessionToken = request.cookies.get('session-token')?.value
-      
-      if (!sessionToken) {
-        console.error('No session token found during OAuth callback')
-        return NextResponse.redirect(
-          new URL('/auth/login?error=session_required', request.url)
-        )
-      }
-
+      // Decode seller information from state parameter
       let sellerId: string
       let sellerEmail: string
 
+      if (!state) {
+        console.error('No state parameter found during OAuth callback')
+        return NextResponse.redirect(
+          new URL('/auth/login?error=missing_state', request.url)
+        )
+      }
+
       try {
-        const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key')
-        const { payload } = await jwtVerify(sessionToken, JWT_SECRET)
-        sellerId = payload.sellerId as string
-        sellerEmail = payload.email as string
+        // Decode the state parameter to get seller info
+        const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'))
+        sellerId = stateData.sellerId
+        sellerEmail = stateData.email
 
         if (!sellerId || !sellerEmail) {
-          throw new Error('Invalid session payload')
+          throw new Error('Invalid state data')
         }
+
+        // Check if state is not too old (30 minute expiry)
+        const stateAge = Date.now() - stateData.timestamp
+        if (stateAge > 30 * 60 * 1000) {
+          throw new Error('State expired')
+        }
+
+        console.log('🔐 Successfully decoded seller from state:', sellerEmail)
+
       } catch (error) {
-        console.error('Invalid session during OAuth callback:', error)
+        console.error('Failed to decode state parameter:', error)
         return NextResponse.redirect(
-          new URL('/auth/login?error=invalid_session', request.url)
+          new URL('/auth/login?error=invalid_state', request.url)
         )
       }
 
