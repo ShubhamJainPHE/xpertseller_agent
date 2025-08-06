@@ -53,10 +53,9 @@ export async function GET(request: NextRequest) {
         // Decode the state parameter to get seller info
         const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'))
         sellerId = stateData.sellerId
-        sellerEmail = stateData.email
 
-        if (!sellerId || !sellerEmail) {
-          throw new Error('Invalid state data')
+        if (!sellerId) {
+          throw new Error('Invalid state data - missing sellerId')
         }
 
         // Check if state is not too old (30 minute expiry)
@@ -65,7 +64,7 @@ export async function GET(request: NextRequest) {
           throw new Error('State expired')
         }
 
-        console.log('🔐 Successfully decoded seller from state:', sellerEmail)
+        console.log('🔐 Successfully decoded seller ID from state:', sellerId)
 
       } catch (error) {
         console.error('Failed to decode state parameter:', error)
