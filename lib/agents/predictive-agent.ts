@@ -1,4 +1,4 @@
-import { unifiedMCPSystem } from '../mcp/unified-mcp-system'
+// Note: MCP system removed - this agent needs refactoring to use direct Supabase queries
 import { NotificationService } from '../utils/notifications'
 import { OpenAI } from 'openai'
 import { SecureQueries } from '../database/secure-queries'
@@ -68,7 +68,11 @@ export class PredictiveAgent {
    * 📦 Predict stockouts 7-21 days before they happen
    */
   private static async predictStockouts(sellerId: string): Promise<PredictionModel[]> {
-    // Use Unified MCP System for dynamic data access
+    // TODO: Replace MCP with direct Supabase queries
+    console.warn('PredictiveAgent.predictStockouts: MCP system removed - returning empty results')
+    return []
+    
+    /* Original MCP-based logic - needs refactoring:
     const productsResult = await unifiedMCPSystem.queryDatabase('get_products', {
       seller_id: sellerId,
       limit: 50,
@@ -78,228 +82,35 @@ export class PredictiveAgent {
     if (!productsResult.success || !productsResult.data.results) return []
     const products = productsResult.data.results
 
-    const predictions: PredictionModel[] = []
-
-    for (const product of products) {
-      // Get sales velocity trend
-      const last30Days = (product as any).sales_data?.filter((s: any) => 
-        new Date(s.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      ) || []
-      
-      const last7Days = last30Days.filter((s: any) =>
-        new Date(s.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      )
-
-      if (last7Days.length === 0) continue
-
-      const currentVelocity = last7Days.reduce((sum: number, s: any) => sum + (s.units_sold || 0), 0) / 7
-      const historicalVelocity = last30Days.reduce((sum: number, s: any) => sum + (s.units_sold || 0), 0) / 30
-      
-      // Detect acceleration in sales
-      const velocityTrend = currentVelocity / Math.max(historicalVelocity, 0.1)
-      const projectedVelocity = currentVelocity * Math.max(velocityTrend, 1)
-      
-      // Account for advertising impact
-      const recentAdSpend = (product as any).advertising_data?.filter((a: any) =>
-        new Date(a.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      ).reduce((sum: number, a: any) => sum + (a.spend || 0), 0) || 0
-      
-      const adImpactMultiplier = recentAdSpend > 0 ? 1.2 : 1.0
-      const adjustedVelocity = projectedVelocity * adImpactMultiplier
-      
-      // Predict stockout date
-      const daysUntilStockout = (product as any).stock_level / Math.max(adjustedVelocity, 0.1)
-      const leadTime = (product as any).lead_time_days || 14
-      
-      // Predict problems 7-21 days ahead
-      if (daysUntilStockout <= leadTime + 7 && daysUntilStockout > 3) {
-        const confidence = Math.min(0.95, 0.6 + (velocityTrend * 0.3))
-        const impact = adjustedVelocity * (product as any).current_price * Math.max(0, leadTime - daysUntilStockout + 7)
-        
-        predictions.push({
-          type: 'stockout',
-          confidence,
-          timeline: `${Math.ceil(daysUntilStockout)} days`,
-          impact,
-          preventive_actions: [
-            `Reorder ${Math.ceil(adjustedVelocity * (leadTime + 14))} units now`,
-            'Negotiate faster shipping with supplier',
-            'Reduce advertising spend to slow demand',
-            'Increase price by 5-10% to reduce velocity'
-          ]
-        })
-      }
-    }
-
-    return predictions
+    */ 
+    // End of commented MCP-based logic
   }
 
   /**
    * 🥇 Predict Buy Box loss based on competitor patterns
    */
   private static async predictBuyBoxLoss(sellerId: string): Promise<PredictionModel[]> {
-    // Use Unified MCP System for Buy Box data
-    const buyBoxResult = await unifiedMCPSystem.queryDatabase('get_products', {
-      seller_id: sellerId,
-      where: 'buy_box_percentage_7d < 0.9',
-      limit: 100
-    })
-
-    if (!buyBoxResult.success || !buyBoxResult.data.results) return []
-    const products = buyBoxResult.data.results
-
-    const predictions: PredictionModel[] = []
-
-    for (const product of products) {
-      const buyBox7d = (product as any).buy_box_percentage_7d || 0
-      const buyBox30d = (product as any).buy_box_percentage_30d || 0
-      
-      // Calculate trend
-      const buyBoxTrend = buyBox7d - buyBox30d
-      
-      // If declining trend continues, predict full loss
-      if (buyBoxTrend < -0.1 && buyBox7d < 0.8) {
-        const daysToLoss = Math.max(1, buyBox7d / Math.abs(buyBoxTrend) * 7)
-        const confidence = Math.min(0.9, Math.abs(buyBoxTrend) * 5)
-        const impact = (product as any).velocity_30d * (product as any).current_price * 0.6 // 60% revenue loss
-        
-        predictions.push({
-          type: 'buybox_loss',
-          confidence,
-          timeline: `${Math.ceil(daysToLoss)} days`,
-          impact,
-          preventive_actions: [
-            'Monitor competitor prices more closely',
-            'Prepare 3-5% price reduction strategy',
-            'Improve fulfillment speed if possible',
-            'Check inventory levels vs competitors'
-          ]
-        })
-      }
-    }
-
-    return predictions
+    // TODO: Replace MCP with direct Supabase queries
+    console.warn('PredictiveAgent.predictBuyBoxLoss: MCP system removed - returning empty results')
+    return []
   }
 
   /**
    * 🌊 Predict seasonal changes using external data
    */
   private static async predictSeasonalChanges(sellerId: string): Promise<PredictionModel[]> {
-    try {
-      // Use Unified MCP System for seasonal data
-      const productsResult = await unifiedMCPSystem.queryDatabase('get_products', {
-        seller_id: sellerId,
-        where: 'is_active = true',
-        columns: 'category, subcategory, velocity_30d, current_price',
-        limit: 100
-      })
-
-      if (!productsResult.success || !productsResult.data.results) return []
-      const products = productsResult.data.results
-
-      const categories = [...new Set(products.map((p: any) => p.category))]
-      const predictions: PredictionModel[] = []
-
-      for (const category of categories) {
-        // Use AI to analyze seasonal patterns
-        const seasonalAnalysis = await circuitBreakers.openai.execute(async () => {
-          return await this.openai.chat.completions.create({
-            model: 'gpt-4',
-            messages: [{
-              role: 'system',
-              content: `You are a seasonal trend analyst. Analyze the category "${sanitizeForAI(String(category))}" for the next 30 days considering current month is ${new Date().toLocaleString('default', { month: 'long' })}.`
-            }, {
-              role: 'user', 
-              content: `What seasonal changes should I expect for "${sanitizeForAI(String(category))}" products in the next 30 days? Consider:
-              1. Upcoming holidays/events
-              2. Weather changes
-              3. Shopping patterns
-              4. Competition levels
-              
-              Respond with JSON: {"trend": "increasing|decreasing|stable", "confidence": 0.0-1.0, "peak_date": "YYYY-MM-DD", "impact_percentage": -50 to 200}`
-            }]
-          })
-        })
-
-        const analysis = JSON.parse(seasonalAnalysis.choices[0]?.message?.content || '{}')
-        
-        if (analysis.confidence > 0.6) {
-          const categoryProducts = products.filter((p: any) => p.category === category)
-          const totalRevenue = categoryProducts.reduce((sum: number, p: any) => sum + (p.velocity_30d * p.current_price), 0)
-          const impact = totalRevenue * (analysis.impact_percentage / 100)
-
-          predictions.push({
-            type: 'seasonal_decline',
-            confidence: analysis.confidence,
-            timeline: `Peak: ${analysis.peak_date}`,
-            impact,
-            preventive_actions: [
-              analysis.trend === 'increasing' ? 'Increase inventory levels' : 'Prepare inventory liquidation',
-              analysis.trend === 'increasing' ? 'Scale advertising spend' : 'Reduce advertising budget',
-              'Adjust pricing strategy for seasonal demand',
-              'Plan promotional campaigns accordingly'
-            ]
-          })
-        }
-      }
-
-      return predictions
-    } catch (error) {
-      console.error('Seasonal prediction failed:', error)
-      return []
-    }
+    // TODO: Replace MCP with direct Supabase queries
+    console.warn('PredictiveAgent.predictSeasonalChanges: MCP system removed - returning empty results')
+    return []
   }
 
   /**
    * ⚔️ Predict competitor threats using market intelligence
    */
   private static async predictCompetitorThreats(sellerId: string): Promise<PredictionModel[]> {
-    // This would integrate with competitor monitoring tools
-    // For now, we'll use price history patterns
-    
-    // Use Unified MCP System for pricing data
-    const productsResult = await unifiedMCPSystem.queryDatabase('get_products', {
-      seller_id: sellerId,
-      where: 'is_active = true',
-      columns: '*',
-      order: 'velocity_30d DESC',
-      limit: 20
-    })
-    
-    if (!productsResult.success || !productsResult.data.results) return []
-    const products = productsResult.data.results
-
-    if (!products) return []
-
-    const predictions: PredictionModel[] = []
-
-    for (const product of products) {
-      // Simulate competitor threat analysis
-      // In real implementation, this would use web scraping or market data APIs
-      
-      const priceVolatility = Math.random() * 0.3 // Simulated competitor price volatility
-      const marketShare = (product as any).buy_box_percentage_30d || 0.5
-      
-      if (priceVolatility > 0.15 && marketShare > 0.7) {
-        // High-performing product with volatile competitor pricing = threat
-        const impact = (product as any).velocity_30d * (product as any).current_price * 0.3
-        
-        predictions.push({
-          type: 'competitor_threat',
-          confidence: 0.7,
-          timeline: '7-14 days',
-          impact,
-          preventive_actions: [
-            'Set up automated competitor price monitoring',
-            'Prepare dynamic pricing response strategy', 
-            'Strengthen product differentiation',
-            'Build customer loyalty programs'
-          ]
-        })
-      }
-    }
-
-    return predictions
+    // TODO: Replace MCP with direct Supabase queries
+    console.warn('PredictiveAgent.predictCompetitorThreats: MCP system removed - returning empty results')
+    return []
   }
 
   /**
@@ -368,26 +179,11 @@ The AI is continuously monitoring and will alert you when action is needed.
     sellerId: string,
     predictions: PredictionModel[]
   ): Promise<void> {
-    for (const prediction of predictions) {
-      // Use Unified MCP System to store predictions
-      await unifiedMCPSystem.queryDatabase('insert_fact_stream', {
-        seller_id: sellerId,
-        event_type: 'prediction.generated',
-        event_category: 'intelligence',
-        data: {
-          prediction_type: prediction.type,
-          confidence: prediction.confidence,
-          timeline: prediction.timeline,
-          predicted_impact: prediction.impact,
-          preventive_actions: prediction.preventive_actions,
-          created_at: new Date().toISOString()
-        },
-        importance_score: Math.ceil(prediction.confidence * 10),
-        requires_action: prediction.confidence > 0.8,
-        processing_status: 'completed',
-        processed_by: ['predictive_agent']
-      })
-    }
+    // TODO: Replace MCP with direct Supabase queries
+    console.warn('PredictiveAgent.storePredictions: MCP system removed - skipping storage')
+    // for (const prediction of predictions) {
+    //   // Store predictions using direct Supabase queries
+    // }
   }
 
   /**

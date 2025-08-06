@@ -1,5 +1,4 @@
-// Enable Unified MCP System for all notifications
-import { unifiedMCPSystem } from '../mcp/unified-mcp-system'
+// Direct Supabase + Resend integration for notifications
 import { supabaseAdmin } from '../database/connection'
 
 interface NotificationOptions {
@@ -63,13 +62,8 @@ ${options.link ? `View Details: ${options.link}` : ''}
 
 Reply STOP to unsubscribe`
 
-      // WhatsApp via Unified MCP System (Composio integration)
-      await unifiedMCPSystem.sendNotification(
-        phoneNumber,
-        'XpertSeller Alert',
-        message,
-        'high'
-      )
+      // Note: WhatsApp integration removed (MCP dependency)
+      console.log('WhatsApp feature temporarily disabled')
       
       console.log(`📱 WhatsApp sent to ${phoneNumber}`)
     } catch (error) {
@@ -133,16 +127,7 @@ Reply STOP to unsubscribe`
     let gmailError: unknown = null
     let resendError: unknown = null
 
-    // 🎯 PRIMARY: Try Gmail MCP via Composio first (FREE & UNLIMITED)
-    try {
-      console.log('📧 Attempting Gmail MCP (primary method)...')
-      await unifiedMCPSystem.sendNotification(email, subject, htmlContent, options.urgency)
-      console.log(`✅ Email sent via Gmail MCP to ${email}`)
-      return // Success! Exit early
-    } catch (error) {
-      gmailError = error
-      console.warn('⚠️ Gmail MCP failed, trying Resend fallback:', error instanceof Error ? error.message : error)
-    }
+    // Note: MCP Gmail removed - using Resend directly
 
     // 🛡️ FALLBACK: Use Resend if Gmail MCP fails
     try {

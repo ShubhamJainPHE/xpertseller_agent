@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
-import { unifiedMCPSystem } from '../mcp/unified-mcp-system'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -122,16 +121,7 @@ export class OTPService {
 
     let gmailError: any = null
 
-    // 🎯 PRIMARY: Try Gmail MCP via Composio first (FREE & UNLIMITED)
-    try {
-      console.log('📧 Attempting Gmail MCP (primary method)...')
-      await unifiedMCPSystem.sendNotification(email, subject, htmlContent, 'high')
-      console.log(`✅ OTP email sent via Gmail MCP to ${email}`)
-      return true // Success! Exit early
-    } catch (error) {
-      gmailError = error
-      console.warn('⚠️ Gmail MCP failed, trying Resend fallback:', error instanceof Error ? error.message : error)
-    }
+    // Note: MCP Gmail removed - using Resend directly
 
     // 🛡️ FALLBACK: Use Resend if Gmail MCP fails
     if (process.env.RESEND_API_KEY) {
