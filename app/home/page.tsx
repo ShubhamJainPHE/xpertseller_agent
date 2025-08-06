@@ -173,6 +173,9 @@ export default function HomePage() {
                         headers: {
                           'Content-Type': 'application/json',
                         },
+                        body: JSON.stringify({
+                          sellerId: seller?.id
+                        })
                       });
                       
                       if (response.ok) {

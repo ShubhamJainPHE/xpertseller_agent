@@ -3,39 +3,20 @@ import { jwtVerify } from 'jose'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current authenticated seller from session
-    const sessionToken = request.cookies.get('session-token')?.value
-    
-    if (!sessionToken) {
+    // Get sellerId from request body (passed from frontend)
+    const body = await request.json().catch(() => ({}))
+    const sellerId = body.sellerId
+
+    if (!sellerId) {
       return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { success: false, error: 'Seller ID required' },
+        { status: 400 }
       )
     }
 
-    let sellerId: string
-    let sellerEmail: string
-
-    try {
-      const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key')
-      const { payload } = await jwtVerify(sessionToken, JWT_SECRET)
-      sellerId = payload.sellerId as string
-      sellerEmail = payload.email as string
-
-      if (!sellerId || !sellerEmail) {
-        throw new Error('Invalid session payload')
-      }
-    } catch (error) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid session' },
-        { status: 401 }
-      )
-    }
-
-    // Generate state parameter with seller info encoded
+    // Generate simple state parameter for CSRF protection
     const stateData = {
       sellerId: sellerId,
-      email: sellerEmail,
       timestamp: Date.now(),
       nonce: generateRandomString(16)
     }
@@ -50,7 +31,7 @@ export async function POST(request: NextRequest) {
     const authUrl = `https://sellercentral.amazon.com/apps/authorize/consent?application_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&version=beta`
     
     // Log the OAuth process
-    console.log('🔗 Amazon OAuth initiated for seller:', sellerEmail)
+    console.log('🔗 Amazon OAuth initiated for seller ID:', sellerId)
     console.log('📋 App ID:', appId)
     console.log('🔄 Redirect URI:', redirectUri)
     console.log('🔐 State encoded with seller data')
