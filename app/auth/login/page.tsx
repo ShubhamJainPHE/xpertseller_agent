@@ -80,7 +80,7 @@ export default function LoginPage() {
 
       if (response.ok && data.success) {
         console.log('🎉 OTP verification successful, redirecting...')
-        router.push('/home')
+        router.push('/dashboard')
       } else {
         setError(data.error || 'Invalid OTP code')
       }

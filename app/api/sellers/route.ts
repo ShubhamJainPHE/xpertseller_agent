@@ -113,3 +113,48 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const sellerId = searchParams.get('sellerId')
+
+    if (!sellerId) {
+      return NextResponse.json(
+        { error: 'Seller ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Fetch seller data
+    const { data: seller, error } = await supabase
+      .from('sellers')
+      .select('*')
+      .eq('id', sellerId)
+      .single()
+
+    if (error) {
+      console.error('❌ Error fetching seller:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch seller data' },
+        { status: 500 }
+      )
+    }
+
+    if (!seller) {
+      return NextResponse.json(
+        { error: 'Seller not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(seller)
+
+  } catch (error) {
+    console.error('❌ GET sellers API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { OTPService } from '@/lib/auth/otp-service'
 import { headers } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
 // Rate limiting store (in production, use Redis)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
@@ -65,6 +66,56 @@ export async function POST(request: Request) {
     }
 
     console.log(`📧 OTP request from ${email} (IP: ${ip})`)
+
+    // Check if seller exists, create basic one if not
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+    
+    let seller = await supabase
+      .from('sellers')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .single();
+    
+    // If no seller, create basic one
+    if (!seller.data) {
+      console.log(`👤 Creating basic seller record for ${email}`);
+      seller = await supabase
+        .from('sellers')
+        .insert({
+          email: email.toLowerCase(),
+          amazon_seller_id: `PENDING_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+          status: 'active',
+          marketplace_ids: ['ATVPDKIKX0DER'], // US marketplace default
+          sp_api_credentials: { needsAuth: true },
+          business_context: {},
+          preferences: {
+            risk_tolerance: 0.5,
+            auto_execute_threshold: 0.8,
+            notification_channels: ['email', 'dashboard'],
+            working_hours: { start: '09:00', end: '18:00', timezone: 'UTC' },
+            max_daily_spend: 1000,
+            margin_floors: {}
+          },
+          risk_tolerance: 0.5,
+          onboarding_completed: false,
+          subscription_tier: 'starter'
+        })
+        .select()
+        .single();
+      
+      if (seller.error) {
+        console.error('Failed to create seller:', seller.error);
+        return NextResponse.json(
+          { error: 'Failed to create account. Please try again.' },
+          { status: 500 }
+        );
+      }
+      
+      console.log(`✅ Created seller account for ${email}: ${seller.data.id}`);
+    }
 
     // Send OTP
     const result = await OTPService.sendOTP(email.toLowerCase().trim())

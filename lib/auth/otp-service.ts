@@ -229,13 +229,12 @@ export class OTPService {
         .single()
 
       if (sellerError && sellerError.code === 'PGRST116') {
-        // Seller doesn't exist, skip account creation for now
-        console.log(`⚠️ Seller account not found for ${email}, allowing login without account creation`);
+        // Seller doesn't exist - this shouldn't happen with new flow since send-otp creates sellers
+        console.error(`⚠️ Critical: Seller account not found for ${email} - this shouldn't happen!`);
         
         return {
-          success: true,
-          message: 'Login successful!',
-          sellerId: null // No seller ID for new users
+          success: false,
+          message: 'Account setup error. Please try logging in again.'
         }
       } else if (sellerError) {
         console.error('Error fetching seller:', sellerError)

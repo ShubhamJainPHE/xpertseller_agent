@@ -3,6 +3,7 @@ import { OTPService } from '@/lib/auth/otp-service'
 import { SecureSessionManager } from '@/lib/auth/secure-session'
 import { AuthMiddleware } from '@/lib/auth/auth-middleware'
 import { headers } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   // Apply CSRF protection and rate limiting
@@ -62,19 +63,38 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     console.log(`✅ OTP verified for ${email}, sellerId: ${sellerId}`)
     
     if (!sellerId) {
-      console.log(`⚠️ No sellerId for ${email}, allowing basic login without session`)
-      return NextResponse.json({
-        success: true,
-        message: 'Login successful! Account setup needed.',
-        seller: {
-          id: null,
-          email: email.toLowerCase(),
-          verified: true,
-          needsSetup: true
-        },
-        redirect: '/auth/onboarding'
-      })
+      console.log(`⚠️ No sellerId for ${email}, this shouldn't happen with new flow`)
+      return NextResponse.json(
+        { error: 'Account setup failed. Please try again.' },
+        { status: 500 }
+      )
     }
+
+    // Get seller details to check Amazon connection
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+    
+    const { data: sellerData, error: sellerError } = await supabase
+      .from('sellers')
+      .select('amazon_seller_id, sp_api_credentials')
+      .eq('id', sellerId)
+      .single();
+
+    if (sellerError) {
+      console.error('Error fetching seller data:', sellerError);
+      return NextResponse.json(
+        { error: 'Failed to check account status. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Check Amazon connection status
+    const isAmazonConnected = sellerData.amazon_seller_id && 
+                              !sellerData.amazon_seller_id.startsWith('PENDING');
+
+    console.log(`🔍 Amazon connection check for ${email}: ${isAmazonConnected ? 'Connected' : 'Not Connected'}`);
 
     // Create secure session using SecureSessionManager
     console.log(`🔄 Creating secure session for ${email}...`)
@@ -86,6 +106,9 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
 
     console.log(`✅ Secure session created for ${email}, sessionId: ${sessionData.sessionId}`)
 
+    // Determine redirect based on Amazon connection
+    const redirectTo = isAmazonConnected ? '/dashboard' : '/connect-amazon';
+
     // Create secure response with browser history protection
     const response = NextResponse.json({
       success: true,
@@ -95,7 +118,7 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
         email: email.toLowerCase(),
         verified: true
       },
-      redirect: '/home'
+      redirectTo: redirectTo
     })
 
     // Set secure HTTP-only cookies

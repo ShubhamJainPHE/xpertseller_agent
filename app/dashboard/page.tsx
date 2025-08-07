@@ -1,11 +1,82 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, AlertCircle, TrendingUp, Shield, Brain, ArrowRight } from 'lucide-react'
+import { CheckCircle, AlertCircle, TrendingUp, Shield, Brain, ArrowRight, RefreshCw } from 'lucide-react'
 import { AmazonConnectionStatus } from '@/components/amazon-connection-status'
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    checkAuthAndConnection()
+  }, [])
+
+  const checkAuthAndConnection = async () => {
+    try {
+      // Check if logged in
+      const sessionResponse = await fetch('/api/auth/verify-otp', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!sessionResponse.ok) {
+        router.push('/auth');
+        return;
+      }
+
+      const sessionData = await sessionResponse.json();
+      const sellerId = sessionData.seller?.id;
+
+      if (!sellerId) {
+        router.push('/auth');
+        return;
+      }
+
+      // Get user data
+      const sellerResponse = await fetch(`/api/sellers?sellerId=${sellerId}`, {
+        credentials: 'include'
+      });
+      
+      if (!sellerResponse.ok) {
+        console.error('Failed to fetch seller data');
+        router.push('/auth');
+        return;
+      }
+
+      const sellerData = await sellerResponse.json();
+      
+      // Check Amazon connection
+      const isConnected = sellerData.amazon_seller_id && 
+                         !sellerData.amazon_seller_id.startsWith('PENDING');
+
+      if (!isConnected) {
+        router.push('/connect-amazon');
+        return;
+      }
+
+      setUser(sellerData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Auth/connection check failed:', error);
+      router.push('/auth');
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
+        <div className="flex items-center justify-center space-x-3">
+          <RefreshCw className="w-6 h-6 text-blue-400 animate-spin" />
+          <p className="text-gray-600 text-lg">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="max-w-7xl mx-auto px-4 py-8">

@@ -46,14 +46,14 @@ export async function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users from protected routes
   if (isProtectedPath && !isAuthenticated) {
-    console.log(`🔒 Redirecting unauthenticated user from ${pathname} to /auth/login`)
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    console.log(`🔒 Redirecting unauthenticated user from ${pathname} to /auth`)
+    return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  // Redirect authenticated users from login page
-  if (pathname === '/auth/login' && isAuthenticated) {
-    console.log(`🔄 Redirecting authenticated user from login to /home`)
-    return NextResponse.redirect(new URL('/home', request.url))
+  // Redirect authenticated users from login/auth pages
+  if ((pathname === '/auth/login' || pathname === '/auth') && isAuthenticated) {
+    console.log(`🔄 Redirecting authenticated user from ${pathname} to /dashboard`)
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   // Add user data to request headers for server components

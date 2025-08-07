@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         verified: true,
         isNewUser: true
       },
-      redirect: '/home?welcome=true'
+      redirect: '/dashboard?welcome=true'
     })
 
     // Set secure session cookie
