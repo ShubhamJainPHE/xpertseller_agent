@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       if (!state) {
         console.error('No state parameter found during OAuth callback')
         return NextResponse.redirect(
-          new URL('/auth/login?error=missing_state', request.url)
+          new URL('/auth?error=missing_state', request.url)
         )
       }
 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error('Failed to decode state parameter:', error)
         return NextResponse.redirect(
-          new URL('/auth/login?error=invalid_state', request.url)
+          new URL('/auth?error=invalid_state', request.url)
         )
       }
 
