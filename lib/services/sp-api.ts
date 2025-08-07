@@ -793,7 +793,7 @@ export async function createSPApiService(sellerId: string): Promise<SPApiService
     }
 
     const credentials = seller.sp_api_credentials as any
-    const spApiCredentials: SPApiCredentials = {
+    const spApiCredentials: SPAPICredentials = {
       clientId: credentials.clientId,
       clientSecret: credentials.clientSecret,
       refreshToken: credentials.refreshToken,
