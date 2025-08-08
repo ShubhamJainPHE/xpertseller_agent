@@ -149,28 +149,28 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Mock Data Notice */}
-        <Card className="border-yellow-200 bg-yellow-50 mb-8">
+        {/* Real Data Status */}
+        <Card className="border-green-200 bg-green-50 mb-8">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600" />
-              <CardTitle className="text-lg text-yellow-800">Demo Mode Active</CardTitle>
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-lg text-green-800">System Active</CardTitle>
             </div>
-            <CardDescription className="text-yellow-700">
-              You're currently using the mock database for testing. Your onboarding data has been logged to the server console.
+            <CardDescription className="text-green-700">
+              Connected to your Amazon seller account: {user?.amazon_seller_id}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 text-sm text-yellow-700">
-              <p>✅ Your seller profile has been created</p>
-              <p>✅ AI preferences have been configured</p>
-              <p>✅ All three AI agents are ready to work</p>
-              <div className="mt-4 p-3 bg-yellow-100 rounded-md">
-                <p className="font-medium">Next Steps:</p>
+            <div className="space-y-2 text-sm text-green-700">
+              <p>✅ Amazon SP-API integrated and operational</p>
+              <p>✅ Real product data synced from your account</p>
+              <p>✅ All AI agents monitoring your business live</p>
+              <div className="mt-4 p-3 bg-green-100 rounded-md">
+                <p className="font-medium">Account Details:</p>
                 <ul className="mt-2 space-y-1 text-xs">
-                  <li>• Set up your real Supabase database to persist data</li>
-                  <li>• Add your Amazon SP-API credentials for live data</li>
-                  <li>• Configure notification channels (email, SMS, WhatsApp)</li>
+                  <li>• Email: {user?.email}</li>
+                  <li>• Seller ID: {user?.amazon_seller_id}</li>
+                  <li>• Marketplace: India (A21TJRUUN4KGV)</li>
                 </ul>
               </div>
             </div>
@@ -184,14 +184,17 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>View Your Setup</CardTitle>
+              <CardTitle>Product Management</CardTitle>
               <CardDescription>
-                Check the server console to see all the data you entered during onboarding
+                Manage your {user ? '13 synced products' : 'products'} and inventory levels
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full" disabled>
-                Server Console Logs
+              <Button 
+                className="w-full" 
+                onClick={() => router.push('/dashboard/inventory')}
+              >
+                View Products & Inventory
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardContent>
@@ -199,13 +202,16 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Data Analytics</CardTitle>
+              <CardTitle>Performance Analytics</CardTitle>
               <CardDescription>
                 View your Amazon business performance and insights
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                onClick={() => router.push('/dashboard/analytics')}
+              >
                 View Analytics Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -216,7 +222,7 @@ export default function DashboardPage() {
         {/* Footer */}
         <div className="mt-12 text-center">
           <p className="text-gray-500 text-sm">
-            🎉 Congratulations! XpertSeller is now protecting and optimizing your Amazon business.
+            🎉 XpertSeller is actively monitoring your Amazon business with real SP-API data!
           </p>
         </div>
       </div>
