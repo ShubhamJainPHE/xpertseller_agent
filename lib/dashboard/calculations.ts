@@ -142,29 +142,72 @@ export class DashboardCalculations {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const dateFilter = thirtyDaysAgo.toISOString().split('T')[0]
 
-      // TODO: Replace with direct Supabase queries for actual data
-      console.warn('getAllMetrics: Using mock data while MCP system is being refactored')
-      
-      // Mock data for now - in real implementation, replace with direct Supabase queries
-      const totalRevenue = 12500
-      const totalProfit = 3200
-      const totalUnits = 247
-      const sessionCount = 1890
-      const totalAdSpend = 450
-      const adSales = 2100
+      // Get real data from database tables
+      console.log('getAllMetrics: Fetching real data from Supabase tables')
+
+      // Get sales data from last 30 days
+      const { data: salesData } = await supabaseAdmin
+        .from('sales_data')
+        .select('revenue, profit, units_sold, sessions, conversion_rate, date')
+        .eq('seller_id', sellerId)
+        .gte('date', dateFilter)
+
+      // Get orders data from last 30 days  
+      const { data: ordersData } = await supabaseAdmin
+        .from('orders')
+        .select('order_total_amount, number_of_items_shipped')
+        .eq('seller_id', sellerId)
+        .gte('purchase_date', dateFilter)
+
+      // Get inventory data
+      const { data: inventoryData } = await supabaseAdmin
+        .from('inventory')
+        .select('total_quantity, sellable_quantity')
+        .eq('seller_id', sellerId)
+
+      // Get products data
+      const { data: productsData } = await supabaseAdmin
+        .from('products')
+        .select('id, current_price, buy_box_percentage_30d, conversion_rate_30d, velocity_30d')
+        .eq('seller_id', sellerId)
+
+      // Get advertising data from last 30 days
+      const { data: adData } = await supabaseAdmin
+        .from('advertising_spend')
+        .select('amount, attributed_sales')
+        .eq('seller_id', sellerId)
+        .gte('date', dateFilter)
+
+      // Calculate totals from real data or fallback to 0
+      const totalRevenue = salesData?.reduce((sum, item) => sum + (item.revenue || 0), 0) || 0
+      const totalProfit = salesData?.reduce((sum, item) => sum + (item.profit || 0), 0) || 0
+      const totalUnits = salesData?.reduce((sum, item) => sum + (item.units_sold || 0), 0) || 0
+      const sessionCount = salesData?.reduce((sum, item) => sum + (item.sessions || 0), 0) || 0
+      const totalAdSpend = adData?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0
+      const adSales = adData?.reduce((sum, item) => sum + (item.attributed_sales || 0), 0) || 0
       const organicSales = totalRevenue - adSales
-      const activeProducts = 15
-      const avgBuyBoxWinRate = 78.5
-      const avgConversionRate = 13.1
-      const lowStockProducts = 3
-      const inventoryValue = 8750
+      const activeProducts = productsData?.length || 0
+      
+      // Calculate averages and derived metrics
+      const avgBuyBoxWinRate = productsData?.length > 0 
+        ? productsData.reduce((sum, p) => sum + (p.buy_box_percentage_30d || 0), 0) / productsData.length 
+        : 0
+      const avgConversionRate = productsData?.length > 0 
+        ? productsData.reduce((sum, p) => sum + (p.conversion_rate_30d || 0), 0) / productsData.length 
+        : 0
+      
+      // Calculate inventory metrics
+      const inventoryValue = inventoryData?.reduce((sum, item) => sum + (item.sellable_quantity * 25), 0) || 0 // Estimate $25 per unit
+      const lowStockProducts = inventoryData?.filter(item => item.sellable_quantity < 10)?.length || 0
+      
+      // Fixed values for now - these would come from additional tables in full implementation
       const averageRating = 4.3
-      const urgentRecommendations = 2
-      const avgProfitMargin = (totalProfit / totalRevenue) * 100
+      const urgentRecommendations = lowStockProducts > 0 ? lowStockProducts : 0
+      const avgProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
       const roas = totalAdSpend > 0 ? adSales / totalAdSpend : 0
-      const avgAcos = totalAdSpend > 0 ? (totalAdSpend / adSales) * 100 : 0
-      const refundRate = 2.1
-      const totalOrders = Math.floor(totalUnits * 0.8)
+      const avgAcos = adSales > 0 ? (totalAdSpend / adSales) * 100 : 0
+      const refundRate = 2.1 // Would come from returns table
+      const totalOrders = ordersData?.length || Math.floor(totalUnits * 0.8)
 
       return {
         connected: true,
