@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SellerAuth } from '@/lib/auth/seller'
+import { supabaseAdmin } from '@/lib/database/connection'
 import { jwtVerify } from 'jose'
-import { setDebugData } from '@/lib/debug-store'
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,20 +73,25 @@ export async function GET(request: NextRequest) {
       }
 
       // Update existing seller with SP-API credentials
-      const { seller, error: updateError } = await SellerAuth.updateSeller(sellerId, {
-        amazon_seller_id: sellingPartnerId,
-        sp_api_credentials: {
-          clientId: process.env.AMAZON_CLIENT_ID || '',
-          clientSecret: process.env.AMAZON_CLIENT_SECRET || '',
-          refreshToken: refreshToken,
-          accessToken: accessToken,
-          tokenExpiry: new Date(Date.now() + 3600 * 1000).toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        onboarding_completed: true,
-        status: 'active',
-        last_login_at: new Date().toISOString()
-      })
+      const { data: seller, error: updateError } = await supabaseAdmin
+        .from('sellers')
+        .update({
+          amazon_seller_id: sellingPartnerId,
+          sp_api_credentials: {
+            clientId: process.env.AMAZON_CLIENT_ID || '',
+            clientSecret: process.env.AMAZON_CLIENT_SECRET || '',
+            refreshToken: refreshToken,
+            accessToken: accessToken,
+            tokenExpiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          onboarding_completed: true,
+          status: 'active',
+          last_login_at: new Date().toISOString()
+        })
+        .eq('id', sellerId)
+        .select()
+        .single()
 
       if (updateError || !seller) {
         console.error('Failed to update seller with SP-API credentials:', updateError)
@@ -150,20 +154,11 @@ async function getApiToken(
         redirect_uri: process.env.AMAZON_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/amazon/callback`,
       }).toString()
 
-  // Store debug info before making the request
-  const debugInfo: any = {
-    timestamp: new Date().toISOString(),
-    requestUrl: url,
-    requestBody: data,
-    codeReceived: code ? `${code.substring(0, 10)}...` : 'null',
-    fullCodeLength: code?.length || 0,
-    envCheck: {
-      hasClientId: !!process.env.AMAZON_CLIENT_ID,
-      hasClientSecret: !!process.env.AMAZON_CLIENT_SECRET,
-      redirectUri: process.env.AMAZON_REDIRECT_URI || 'using fallback'
-    }
-  }
-  setDebugData(debugInfo)
+  // Log debug info
+  console.log('🔑 Token exchange debug:')
+  console.log('  Timestamp:', new Date().toISOString())
+  console.log('  Code received:', code ? `${code.substring(0, 10)}...` : 'null')
+  console.log('  Code length:', code?.length || 0)
 
   try {
     const response = await fetch(url, {
@@ -177,48 +172,27 @@ async function getApiToken(
     const responseText = await response.text()
     
     if (!response.ok) {
-      // Store failed response in debug data
-      const errorDebugInfo: any = {
-        ...debugInfo,
-        response: {
-          status: response.status,
-          statusText: response.statusText,
-          body: responseText
-        }
-      }
-      
       console.error(`Token request failed: ${response.status} ${response.statusText}`, responseText)
       
       // Try to parse error response
       try {
         const errorJson = JSON.parse(responseText)
-        errorDebugInfo.parsedError = errorJson
+        console.error('Parsed error:', errorJson)
       } catch {
-        errorDebugInfo.rawError = responseText
+        console.error('Raw error:', responseText)
       }
       
-      setDebugData(errorDebugInfo)
       throw new Error(`Token request failed: ${response.statusText}`)
     }
 
     const tokenData = JSON.parse(responseText)
-    const successDebugInfo: any = {
-      ...debugInfo,
-      success: true,
-      response: { status: 200, body: 'Success (tokens received)' }
-    }
-    setDebugData(successDebugInfo)
+    console.log('✅ Token exchange successful')
     
     return {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token || refreshToken,
     }
   } catch (err: any) {
-    const errorDebugInfo: any = {
-      ...debugInfo,
-      error: err.message
-    }
-    setDebugData(errorDebugInfo)
     console.error('❌ Token exchange failed:')
     console.error('Request URL:', url)
     console.error('Request body:', data)
@@ -226,5 +200,3 @@ async function getApiToken(
     throw err
   }
 }
-
-// Debug data is accessible via the global variable for debugging
