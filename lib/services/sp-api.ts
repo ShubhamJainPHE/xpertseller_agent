@@ -363,6 +363,47 @@ export class SPApiService {
   }
 
   /**
+   * Get Financial Events - NEW METHOD FOR REAL DATA (FBM + FBA Compatible)
+   */
+  async getFinancialEvents(startDate: Date, endDate: Date): Promise<any> {
+    // Try different parameter combinations to avoid 400 error
+    const params = new URLSearchParams()
+    params.append('PostedAfter', startDate.toISOString())
+    
+    // Only add PostedBefore if it's different from PostedAfter (Amazon requirement)
+    if (endDate.getTime() > startDate.getTime()) {
+      params.append('PostedBefore', endDate.toISOString())
+    }
+    
+    const endpoint = `/finances/v0/financialEvents?${params.toString()}`
+    
+    try {
+      const response = await this.makeRequest(endpoint)
+      console.log(`💰 Fetched financial events from ${startDate.toDateString()} to ${endDate.toDateString()}`)
+      return response
+    } catch (error) {
+      console.error('Failed to fetch financial events:', error)
+      throw new Error(`getFinancialEvents failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Get FBA inventory summaries - NEW METHOD FOR REAL DATA
+   */
+  async getFBAInventorySummaries(): Promise<any> {
+    const endpoint = `/inventory/v1/summaries?marketplaceId=${this.credentials.marketplaceId}&details=true`
+    
+    try {
+      const response = await this.makeRequest(endpoint)
+      console.log(`📦 Fetched FBA inventory for ${response.inventorySummaries?.length || 0} ASINs`)
+      return response
+    } catch (error) {
+      console.error('Failed to fetch FBA inventory summaries:', error)
+      throw new Error(`getFBAInventorySummaries failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
    * Get inventory health data
    */
   async getInventoryHealth(nextToken?: string): Promise<any> {
