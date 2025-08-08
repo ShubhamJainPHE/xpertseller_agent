@@ -319,7 +319,7 @@ class MasterSyncSystem {
       const salesByProductDate = new Map()
       
       for (const item of orderItems) {
-        const date = new Date(item.orders.purchase_date).toISOString().split('T')[0]
+        const date = new Date((item as any).orders.purchase_date).toISOString().split('T')[0]
         const key = `${item.product_id}-${date}`
         
         const revenue = item.item_price?.amount || 0

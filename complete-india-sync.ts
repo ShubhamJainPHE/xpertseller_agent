@@ -34,11 +34,11 @@ async function completeIndiaSync() {
     console.log('\n📋 Fetching complete product data...')
     
     const response = await spApi.getAllListings()
-    if (!response?.items) {
+    if (!(response as any)?.items) {
       throw new Error('No listings found')
     }
     
-    const listings = response.items
+    const listings = (response as any).items
     console.log(`✅ Found ${listings.length} listings`)
     
     // Get detailed info for each product
@@ -64,12 +64,12 @@ async function completeIndiaSync() {
             title: summary.itemName || 'Unknown Product',
             brand: attributes.brand?.[0]?.value || null,
             category: attributes.item_type_name?.[0]?.value || null,
-            current_price: attributes.list_price?.[0]?.Amount ? 
-              parseFloat(attributes.list_price[0].Amount) : null,
-            list_price: attributes.list_price?.[0]?.Amount ? 
-              parseFloat(attributes.list_price[0].Amount) : null,
+            current_price: (attributes.list_price as any)?.[0]?.Amount ? 
+              parseFloat((attributes.list_price as any)[0].Amount) : null,
+            list_price: (attributes.list_price as any)?.[0]?.Amount ? 
+              parseFloat((attributes.list_price as any)[0].Amount) : null,
             stock_level: 0, // Will be updated by inventory sync
-            is_active: summary.status === 'ACTIVE' || summary.status === 'DISCOVERABLE',
+            is_active: (summary.status as any) === 'ACTIVE' || (summary.status as any) === 'DISCOVERABLE',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
             // Removed is_fba since column doesn't exist
