@@ -1,12 +1,12 @@
 {
-  "/api/auth/send-otp/route": "app/api/auth/send-otp/route.js",
-  "/api/auth/amazon/connect/route": "app/api/auth/amazon/connect/route.js",
-  "/api/auth/amazon/callback/route": "app/api/auth/amazon/callback/route.js",
-  "/api/auth/verify-otp/route": "app/api/auth/verify-otp/route.js",
-  "/api/sellers/route": "app/api/sellers/route.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/amazon/callback/route": "app/api/auth/amazon/callback/route.js",
+  "/api/auth/amazon/connect/route": "app/api/auth/amazon/connect/route.js",
+  "/api/auth/verify-otp/route": "app/api/auth/verify-otp/route.js",
+  "/api/auth/send-otp/route": "app/api/auth/send-otp/route.js",
+  "/api/sellers/route": "app/api/sellers/route.js",
+  "/auth/page": "app/auth/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/connect-amazon/page": "app/connect-amazon/page.js",
   "/page": "app/page.js",
-  "/auth/page": "app/auth/page.js"
+  "/connect-amazon/page": "app/connect-amazon/page.js"
 }
