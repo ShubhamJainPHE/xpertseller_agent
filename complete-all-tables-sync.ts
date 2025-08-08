@@ -628,16 +628,17 @@ async function runMasterSync() {
   try {
     console.log('🇮🇳 INDIA MASTER SYNC SYSTEM\n')
     
-    // Get India seller
-    const { data: seller } = await supabaseAdmin
+    // Get ANY seller - they're all Indian
+    const { data: sellers } = await supabaseAdmin
       .from('sellers')
-      .select('id, email, amazon_seller_id')
-      .eq('amazon_seller_id', 'A14IOOJN7DLJME')
-      .single()
+      .select('id, email, amazon_seller_id, sp_api_credentials')
+      .limit(1)
     
-    if (!seller) {
-      throw new Error('India seller not found')
+    if (!sellers || sellers.length === 0) {
+      throw new Error('No sellers found in database')
     }
+    
+    const seller = sellers[0]
     
     console.log(`✅ Seller: ${seller.email}`)
     
