@@ -96,14 +96,14 @@ export class SPAPIConfigService {
    * Get AWS region from marketplace ID
    */
   static getRegionFromMarketplace(marketplaceId: string): string {
-    return this.MARKETPLACE_REGIONS[marketplaceId] || 'us-east-1'
+    return this.MARKETPLACE_REGIONS[marketplaceId] || 'eu-west-1'  // Default to India region
   }
 
   /**
    * Get base URL from region
    */
   static getBaseUrlFromRegion(region: string): string {
-    return this.REGION_BASE_URLS[region] || this.REGION_BASE_URLS['us-east-1']
+    return this.REGION_BASE_URLS[region] || this.REGION_BASE_URLS['eu-west-1']  // Default to India region
   }
 
   /**

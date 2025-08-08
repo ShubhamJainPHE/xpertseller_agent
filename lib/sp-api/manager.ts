@@ -118,7 +118,7 @@ export class SPAPIManager {
       'A2ZV50J4W1RKNI': 'fe'  // Singapore
     }
 
-    return marketplaceRegions[marketplaceId] || 'na'
+    return marketplaceRegions[marketplaceId] || 'eu'  // Default to India/EU region
   }
 
   // Get services for a specific seller

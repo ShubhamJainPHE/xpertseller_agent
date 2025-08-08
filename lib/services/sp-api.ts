@@ -220,7 +220,7 @@ export class SPApiService {
           path: '/attributes/list_price',
           value: [{
             Amount: newPrice,
-            CurrencyCode: 'USD'
+            CurrencyCode: 'INR'
           }]
         }]
       }
@@ -344,7 +344,7 @@ export class SPApiService {
           IsAmazonFulfilled: true,
           PriceToEstimateFees: {
             ListingPrice: {
-              CurrencyCode: req.currency || 'USD',
+              CurrencyCode: req.currency || 'INR',
               Amount: req.price.toString() // FIXED: Amazon expects string, not number
             }
           },
@@ -799,7 +799,7 @@ export async function createSPApiService(sellerId: string): Promise<SPApiService
       refreshToken: credentials.refreshToken,
       sellerId: seller.amazon_seller_id,
       // FIXED: Use seller's actual marketplace instead of hardcoded US
-      marketplaceId: seller.marketplace_ids?.[0] || credentials.marketplaceId || 'ATVPDKIKX0DER'
+      marketplaceId: seller.marketplace_ids?.[0] || credentials.marketplaceId || 'A21TJRUUN4KGV'
     }
 
     return new SPApiService(spApiCredentials)

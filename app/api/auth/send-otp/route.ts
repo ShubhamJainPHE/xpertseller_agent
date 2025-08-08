@@ -88,7 +88,7 @@ export async function POST(request: Request) {
           email: email.toLowerCase(),
           amazon_seller_id: `PENDING_${Date.now()}_${Math.random().toString(36).substring(2)}`,
           status: 'active',
-          marketplace_ids: ['ATVPDKIKX0DER'], // US marketplace default
+          marketplace_ids: ['A21TJRUUN4KGV'], // India marketplace default
           sp_api_credentials: { needsAuth: true },
           business_context: {},
           preferences: {
