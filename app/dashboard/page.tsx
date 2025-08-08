@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, AlertCircle, TrendingUp, Shield, Brain, ArrowRight, RefreshCw } from 'lucide-react'
-import { AmazonConnectionStatus } from '@/components/amazon-connection-status'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -177,9 +176,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Amazon Connection Status */}
-        <AmazonConnectionStatus />
-
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
@@ -190,31 +186,9 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                className="w-full" 
-                onClick={() => router.push('/dashboard/inventory')}
-              >
-                View Products & Inventory
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Analytics</CardTitle>
-              <CardDescription>
-                View your Amazon business performance and insights
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                className="w-full" 
-                onClick={() => router.push('/dashboard/analytics')}
-              >
-                View Analytics Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <p className="text-sm text-gray-600">
+                Product and inventory management coming soon. Your data is being synced from Amazon.
+              </p>
             </CardContent>
           </Card>
         </div>
