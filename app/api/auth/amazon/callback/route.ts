@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/database/connection'
 import { jwtVerify } from 'jose'
 
+// Force Node.js runtime for crypto/jose support
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

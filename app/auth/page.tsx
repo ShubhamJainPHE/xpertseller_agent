@@ -104,12 +104,8 @@ export default function AuthPage() {
       if (response.ok && data.success) {
         console.log('🎉 OTP verification successful, redirecting...');
         // Redirect based on the response redirectTo field
-        if (data.redirectTo) {
-          router.push(data.redirectTo);
-        } else {
-          // Default fallback
-          router.push('/dashboard');
-        }
+        const redirectTo = data.data?.redirectTo || '/dashboard';
+        router.push(redirectTo);
       } else {
         setError(data.error || 'Invalid OTP code');
       }

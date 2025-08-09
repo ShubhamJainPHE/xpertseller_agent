@@ -5,6 +5,9 @@ import { createClient } from '@supabase/supabase-js'
 import { RATE_LIMIT_CONFIG, AMAZON_CONFIG, DEFAULT_SELLER_PREFERENCES, API_MESSAGES } from '@/lib/config/constants'
 import { ApiResponseHelper } from '@/lib/utils/api-response'
 
+// Force Node.js runtime for crypto support
+export const runtime = 'nodejs'
+
 // Rate limiting store (in production, use Redis)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
 

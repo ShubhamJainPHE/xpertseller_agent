@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 
+// Force Node.js runtime for crypto/jose support
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     // Get sellerId from request body (passed from frontend)

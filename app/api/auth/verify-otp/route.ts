@@ -7,6 +7,9 @@ import { createClient } from '@supabase/supabase-js'
 import { ApiResponseHelper } from '@/lib/utils/api-response'
 import { API_MESSAGES } from '@/lib/config/constants'
 
+// Force Node.js runtime for crypto support
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   // Apply CSRF protection and rate limiting
   return await AuthMiddleware.csrfProtection(request, async (req) => {
