@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { OTP_CONFIG, EMAIL_CONFIG, API_MESSAGES } from '@/lib/config/constants'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -22,7 +23,7 @@ export class OTPService {
    * Generate a 6-digit OTP code
    */
   static generateOTP(): string {
-    return crypto.randomInt(100000, 999999).toString()
+    return crypto.randomInt(OTP_CONFIG.range.min, OTP_CONFIG.range.max).toString()
   }
 
   /**
@@ -36,7 +37,7 @@ export class OTPService {
 
       // Generate new OTP
       const otpCode = this.generateOTP()
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+      const expiresAt = new Date(Date.now() + OTP_CONFIG.expiryMinutes * 60 * 1000).toISOString()
 
       // Store OTP in database
       const { data: otpRecord, error: insertError } = await supabase
@@ -67,7 +68,7 @@ export class OTPService {
 
       return { 
         success: true, 
-        message: `OTP sent to ${email}. Code expires in 10 minutes.` 
+        message: API_MESSAGES.success.otpSent
       }
 
     } catch (error) {
@@ -82,7 +83,7 @@ export class OTPService {
   private static async trySendEmail(email: string, otpCode: string): Promise<boolean> {
     console.log('📧 Sending OTP via unified Gmail MCP + Resend fallback system...')
     
-    const subject = '🔐 Your XpertSeller Login Code'
+    const subject = EMAIL_CONFIG.templates.otp.subject
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -119,14 +120,10 @@ export class OTPService {
       </div>
     `
 
-    let gmailError: any = null
-
-    // Note: MCP Gmail removed - using Resend directly
-
-    // 🛡️ FALLBACK: Use Resend if Gmail MCP fails
+    // Send email using Resend API
     if (process.env.RESEND_API_KEY) {
       try {
-        console.log('📧 Attempting Resend (fallback method)...')
+        console.log('📧 Sending email via Resend...')
         const resendResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -134,7 +131,7 @@ export class OTPService {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.RESEND_FROM_EMAIL || 'XpertSeller <onboarding@resend.dev>',
+            from: EMAIL_CONFIG.from,
             to: [email],
             subject: subject,
             html: htmlContent
@@ -142,25 +139,20 @@ export class OTPService {
         })
 
         if (resendResponse.ok) {
-          console.log(`✅ OTP email sent via Resend fallback to ${email}`)
+          console.log(`✅ OTP email sent via Resend to ${email}`)
           return true
         } else {
           const responseText = await resendResponse.text()
           console.error('❌ Resend API failed:', resendResponse.status, responseText)
         }
       } catch (error) {
-        console.error('❌ Resend fallback failed:', error)
+        console.error('❌ Resend API failed:', error)
       }
     } else {
-      console.warn('⚠️ No RESEND_API_KEY configured for fallback')
+      console.warn('⚠️ No RESEND_API_KEY configured')
     }
 
-    // Log comprehensive failure
-    console.error('❌ All email methods failed for OTP:', {
-      email,
-      gmailError: gmailError instanceof Error ? gmailError.message : gmailError,
-      hasResendKey: !!process.env.RESEND_API_KEY
-    })
+    console.error('❌ Email sending failed for:', email)
 
     return false
   }
@@ -193,12 +185,12 @@ export class OTPService {
 
       // Check if expired
       if (new Date() > new Date(otpRecord.expires_at)) {
-        return { success: false, message: 'OTP has expired. Please request a new one.' }
+        return { success: false, message: API_MESSAGES.errors.otpExpired }
       }
 
       // Check attempt limit
-      if (otpRecord.attempts >= 5) {
-        return { success: false, message: 'Too many failed attempts. Please request a new OTP.' }
+      if (otpRecord.attempts >= OTP_CONFIG.maxAttempts) {
+        return { success: false, message: API_MESSAGES.errors.tooManyAttempts }
       }
 
       // Check if code matches
@@ -209,9 +201,10 @@ export class OTPService {
           .update({ attempts: otpRecord.attempts + 1 })
           .eq('id', otpRecord.id)
 
+        const remainingAttempts = OTP_CONFIG.maxAttempts - otpRecord.attempts - 1
         return { 
           success: false, 
-          message: `Invalid OTP code. ${4 - otpRecord.attempts} attempts remaining.` 
+          message: `${API_MESSAGES.errors.otpInvalid}. ${remainingAttempts} attempts remaining.`
         }
       }
 

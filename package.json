@@ -20,7 +20,7 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^20.19.9",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
@@ -33,7 +33,12 @@
   },
   "description": "Ultra-lean Amazon seller platform with 3-step flow: signin → amazon connect → dashboard",
   "main": "index.js",
-  "keywords": ["amazon", "seller", "dashboard", "nextjs"],
+  "keywords": [
+    "amazon",
+    "seller",
+    "dashboard",
+    "nextjs"
+  ],
   "author": "",
   "license": "ISC"
 }

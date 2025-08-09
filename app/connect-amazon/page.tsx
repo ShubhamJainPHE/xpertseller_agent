@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Shield, RefreshCw, ExternalLink, AlertCircle } from "lucide-react";
+import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function ConnectAmazonPage() {
   const router = useRouter();
@@ -10,50 +11,18 @@ export default function ConnectAmazonPage() {
   const [error, setError] = useState('');
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  const { user, loading: authLoading } = useAuth()
+  
   useEffect(() => {
-    // Check if user is logged in
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/verify-otp', {
-          method: 'GET',
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          // User is not logged in, redirect to auth
-          router.replace('/auth');
-          return;
-        }
-        
-        setIsCheckingAuth(false);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        router.replace('/auth');
-      }
-    };
-
-    checkAuth();
-  }, [router]);
+    setIsCheckingAuth(authLoading)
+  }, [authLoading])
 
   const connectAmazon = async () => {
     setConnecting(true);
     setError('');
     
     try {
-      // Get current user session to get sellerId
-      const sessionResponse = await fetch('/api/auth/verify-otp', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      
-      if (!sessionResponse.ok) {
-        throw new Error('Session expired. Please login again.');
-      }
-      
-      const sessionData = await sessionResponse.json();
-      const sellerId = sessionData.seller?.id;
-      
-      if (!sellerId) {
+      if (!user?.id) {
         throw new Error('User session invalid. Please login again.');
       }
       
@@ -64,7 +33,7 @@ export default function ConnectAmazonPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ sellerId })
+        body: JSON.stringify({ sellerId: user.id })
       });
       
       const connectData = await connectResponse.json();

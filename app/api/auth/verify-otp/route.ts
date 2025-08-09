@@ -4,6 +4,8 @@ import { SecureSessionManager } from '@/lib/auth/secure-session'
 import { AuthMiddleware } from '@/lib/auth/auth-middleware'
 import { headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { ApiResponseHelper } from '@/lib/utils/api-response'
+import { API_MESSAGES } from '@/lib/config/constants'
 
 export async function POST(request: NextRequest) {
   // Apply CSRF protection and rate limiting
@@ -25,25 +27,16 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
 
     // Input validation
     if (!email || typeof email !== 'string') {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError('Email is required')
     }
 
     if (!otpCode || typeof otpCode !== 'string') {
-      return NextResponse.json(
-        { error: 'OTP code is required' },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError('OTP code is required')
     }
 
     // Validate OTP code format (6 digits)
     if (!/^\d{6}$/.test(otpCode)) {
-      return NextResponse.json(
-        { error: 'OTP code must be 6 digits' },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError(API_MESSAGES.errors.invalidOtp)
     }
 
     console.log(`🔐 Secure OTP verification attempt for ${email}`)
@@ -53,10 +46,7 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
 
     if (!result.success) {
       console.log(`❌ OTP verification failed for ${email}: ${result.message}`)
-      return NextResponse.json(
-        { error: result.message },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError(result.message)
     }
 
     const sellerId = result.sellerId
@@ -110,16 +100,17 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     const redirectTo = isAmazonConnected ? '/dashboard' : '/connect-amazon';
 
     // Create secure response with browser history protection
-    const response = NextResponse.json({
-      success: true,
-      message: 'Login successful! Redirecting securely...',
-      seller: {
-        id: sellerId,
-        email: email.toLowerCase(),
-        verified: true
-      },
-      redirectTo: redirectTo
-    })
+    const response = ApiResponseHelper.success(
+      API_MESSAGES.success.otpVerified,
+      {
+        seller: {
+          id: sellerId,
+          email: email.toLowerCase(),
+          verified: true
+        },
+        redirectTo: redirectTo
+      }
+    )
 
     // Set secure HTTP-only cookies
     const cookies = SecureSessionManager.createSecureCookies(
@@ -139,11 +130,7 @@ async function handleOTPVerification(request: NextRequest): Promise<NextResponse
     return AuthMiddleware.preventHistoryAccess(response)
 
   } catch (error) {
-    console.error('❌ Secure OTP verification error:', error)
-    return NextResponse.json(
-      { error: 'Verification failed. Please try again.' },
-      { status: 500 }
-    )
+    return ApiResponseHelper.handleUnknownError(error, 'OTP Verification')
   }
 }
 
@@ -153,22 +140,20 @@ export async function GET(request: NextRequest) {
     try {
       const user = authenticatedReq.user!
       
-      return NextResponse.json({
-        success: true,
-        authenticated: true,
-        seller: {
-          id: user.sellerId,
-          email: user.email,
-          sessionId: user.sessionId
+      return ApiResponseHelper.success(
+        'Session valid',
+        {
+          authenticated: true,
+          seller: {
+            id: user.sellerId,
+            email: user.email,
+            sessionId: user.sessionId
+          }
         }
-      })
+      )
 
     } catch (error) {
-      console.error('❌ Session validation error:', error)
-      return NextResponse.json(
-        { error: 'Session validation failed' },
-        { status: 500 }
-      )
+      return ApiResponseHelper.handleUnknownError(error, 'Session Validation')
     }
   })
 }

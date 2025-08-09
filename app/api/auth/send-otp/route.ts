@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { OTPService } from '@/lib/auth/otp-service'
 import { headers } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { RATE_LIMIT_CONFIG, AMAZON_CONFIG, DEFAULT_SELLER_PREFERENCES, API_MESSAGES } from '@/lib/config/constants'
+import { ApiResponseHelper } from '@/lib/utils/api-response'
 
 // Rate limiting store (in production, use Redis)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
@@ -10,7 +12,7 @@ function getRateLimitKey(ip: string, email: string): string {
   return `${ip}:${email}`
 }
 
-function checkRateLimit(key: string, maxRequests: number = 3, windowMs: number = 60 * 60 * 1000): boolean {
+function checkRateLimit(key: string, maxRequests: number = RATE_LIMIT_CONFIG.otp.maxRequests, windowMs: number = RATE_LIMIT_CONFIG.otp.windowMs): boolean {
   const now = Date.now()
   const record = rateLimitStore.get(key)
 
@@ -38,31 +40,19 @@ export async function POST(request: Request) {
 
     // Input validation
     if (!email || typeof email !== 'string') {
-      return NextResponse.json(
-        { error: 'Email is required and must be a string' },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError('Email is required and must be a string')
     }
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Please enter a valid email address' },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError(API_MESSAGES.errors.invalidEmail)
     }
 
     // Rate limiting by IP + Email
     const rateLimitKey = getRateLimitKey(ip, email.toLowerCase())
     if (!checkRateLimit(rateLimitKey)) {
-      return NextResponse.json(
-        { 
-          error: 'Too many OTP requests. Please wait 1 hour before trying again.',
-          rateLimited: true
-        },
-        { status: 429 }
-      )
+      return ApiResponseHelper.rateLimited('Too many OTP requests. Please wait 1 hour before trying again.', 3600)
     }
 
     console.log(`📧 OTP request from ${email} (IP: ${ip})`)
@@ -88,17 +78,10 @@ export async function POST(request: Request) {
           email: email.toLowerCase(),
           amazon_seller_id: `PENDING_${Date.now()}_${Math.random().toString(36).substring(2)}`,
           status: 'active',
-          marketplace_ids: ['A21TJRUUN4KGV'], // India marketplace default
+          marketplace_ids: [AMAZON_CONFIG.defaultMarketplace],
           sp_api_credentials: { needsAuth: true },
           business_context: {},
-          preferences: {
-            risk_tolerance: 0.5,
-            auto_execute_threshold: 0.8,
-            notification_channels: ['email', 'dashboard'],
-            working_hours: { start: '09:00', end: '18:00', timezone: 'UTC' },
-            max_daily_spend: 1000,
-            margin_floors: {}
-          },
+          preferences: DEFAULT_SELLER_PREFERENCES,
           risk_tolerance: 0.5,
           onboarding_completed: false,
           subscription_tier: 'starter'
@@ -108,10 +91,7 @@ export async function POST(request: Request) {
       
       if (seller.error) {
         console.error('Failed to create seller:', seller.error);
-        return NextResponse.json(
-          { error: 'Failed to create account. Please try again.' },
-          { status: 500 }
-        );
+        return ApiResponseHelper.serverError('Failed to create account. Please try again.');
       }
       
       console.log(`✅ Created seller account for ${email}: ${seller.data.id}`);
@@ -133,36 +113,24 @@ export async function POST(request: Request) {
     console.log('📊 OTP Send Attempt:', logData)
 
     if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: result.message,
-        email: email.toLowerCase()
-      })
+      return ApiResponseHelper.success(result.message, { email: email.toLowerCase() })
     } else {
-      return NextResponse.json(
-        { error: result.message },
-        { status: 400 }
-      )
+      return ApiResponseHelper.validationError(result.message)
     }
 
   } catch (error) {
-    console.error('❌ Send OTP API Error:', error)
-    return NextResponse.json(
-      { error: 'Something went wrong. Please try again later.' },
-      { status: 500 }
-    )
+    return ApiResponseHelper.handleUnknownError(error, 'Send OTP')
   }
 }
 
 // Health check endpoint
 export async function GET() {
-  return NextResponse.json({
+  return ApiResponseHelper.success('OTP Send API is healthy', {
     service: 'OTP Send API',
-    status: 'healthy',
     timestamp: new Date().toISOString(),
     rateLimits: {
-      maxRequestsPerHour: 3,
-      windowMs: 60 * 60 * 1000
+      maxRequestsPerHour: RATE_LIMIT_CONFIG.otp.maxRequests,
+      windowMs: RATE_LIMIT_CONFIG.otp.windowMs
     }
   })
 }
